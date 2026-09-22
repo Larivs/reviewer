@@ -1,0 +1,385 @@
+@import "tailwindcss";
+
+/* ── Polices, servies depuis le projet ──────────────────────────────────
+   Aucun appel à un CDN : l'app doit fonctionner sur un réseau fermé, et
+   les polices ne doivent pas dépendre d'internet.
+   Archivo est variable : un seul fichier couvre 100 à 900 (axe verifie
+   dans la table fvar). Le @font-face n'en declarait que 400-700, donc
+   toute graisse au-dela etait grassee faussement par le navigateur au
+   lieu d'utiliser la vraie instance du fichier.                        */
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/archivo-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/archivo-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/plexmono-400-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/plexmono-500-latin.woff2") format("woff2");
+}
+
+/* ── Jetons ─────────────────────────────────────────────────────────────
+   Bleu-noir, presque neutre : le gris d'un outil vidéo contemporain, tiré
+   juste assez vers le bleu pour que l'accent néon ait une famille plutôt que
+   d'être posé sur un fond étranger. L'accent est un bleu électrique — le
+   signal, réservé à ce qui est actif ou attend une action, jamais décoratif.
+
+   La règle n'a pas changé, seule la teinte a tourné. L'ambre a entièrement
+   disparu : il ne subsiste ni comme accent, ni comme statut. Une palette qui
+   garde un souvenir de l'ancienne donne une interface qui hésite.          */
+
+@theme {
+  /* Les paliers restent volontairement écartés. En dessous d'environ quatre
+     points de luminance l'œil ne les sépare plus : les cartes se collent au
+     fond et l'interface entière lit comme un état désactivé. La teinte, elle,
+     ne bouge pas — on reste dans le même bleu-noir d'un bout à l'autre. */
+  --color-bg: #07090e;
+  --color-surface: #0f131b;
+  --color-surface-2: #161c27;
+  --color-surface-3: #1f2733;
+  --color-line: #242e3d;
+  --color-line-strong: #3b4859;
+
+  --color-fg: #e8ecf3;
+  --color-fg-dim: #b4bdcc;
+  /* #828d9f et non #7d889b : sur les nouvelles surfaces, plus sombres et
+     plus bleues que les anciennes, la valeur d'origine retombait à 4,85:1.
+     Deux points de clarté la ramènent à 5,2:1 — la date d'une note et les
+     micro-libellés sont du texte de 10 px, ils n'ont pas de marge. */
+  --color-muted: #828d9f;
+
+  --color-accent: #4aa8ff;
+  --color-accent-dim: #2a6699;
+  --color-accent-fg: #04121f;
+
+  --color-status-todo: #78849a;
+  /* « En cours » était un cyan, à 16° du nouvel accent : sur une pastille de
+     statut à côté d'un timecode, les deux se seraient lus comme une seule
+     information. Le violet s'en écarte de 48° tout en restant froid. */
+  --color-status-doing: #8b7cf6;
+  --color-status-changes: #ff5f56;
+  --color-status-done: #3fd68c;
+
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  /* Rayons resserrés : un instrument de mesure n'est pas arrondi. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 5px;
+  --radius-2xl: 6px;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  /* Une seule lueur froide, très basse, retombant du haut : assez pour que
+     le fond ne soit pas un aplat mort, trop peu pour qu'on la remarque. Le
+     grain de pellicule qui couvrait tout l'écran a été retiré — c'est la
+     texture qui datait le plus l'interface, et elle brouillait les aplats
+     qu'on cherche maintenant. */
+  background-color: var(--color-bg);
+  background-image: radial-gradient(
+    125% 85% at 50% -20%,
+    #101a2b 0%,
+    transparent 68%
+  );
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv05" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Barres de défilement discrètes, dans la palette. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+@layer components {
+  /* Micro-libellé technique, à la manière d'un rapport de tournage. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Donnée secondaire : date, durée, compte. Cousine de `.label`, dont elle
+     abandonne les capitales et l'espacement — c'est ce qui rend `.label`
+     lisible en étiquette d'un mot et illisible sur « 22 sept., 10:18 », où
+     l'œil doit reconstruire quinze caractères sans forme de mot à quoi se
+     raccrocher. Un cran plus clair aussi : ces valeurs se lisent, elles ne
+     font pas que signaler. */
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-muted);
+  }
+
+  /* Commande discrète d'une carte : « Résoudre », « Répondre ». En `.label`
+     elles criaient en capitales tout en étant le texte le plus pâle de la
+     carte — deux défauts contraires. Bas-de-casse, un point de plus, et la
+     couleur du texte secondaire : ce sont des boutons, ils doivent se lire. */
+  .card-action {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-fg-dim);
+    transition: color 120ms ease;
+  }
+  .card-action:hover:not(:disabled) {
+    color: var(--color-fg);
+  }
+
+  /* Plaque du timecode : l'afficheur de l'appareil. Léger creux, filet clair
+     en haut, comme un cabochon d'instrument. */
+  .tc-plate {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-line);
+    background: linear-gradient(180deg, #080b11, #151b25);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+    padding: 0.3rem 0.5rem;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Le néon ──────────────────────────────────────────────────────────
+     Un halo porté par l'accent, et par lui seul. C'est ce qui sépare un
+     bleu vif d'un bleu *néon* : la couleur déborde légèrement de la forme,
+     comme un tube qui éclaire le mur derrière lui.
+
+     Réservé à trois objets — le bouton primaire, la portion lue de la piste,
+     la tête de lecture. En mettre partout reviendrait à n'en mettre nulle
+     part, et un halo sous chaque bordure rend une interface floue. */
+  .neon {
+    box-shadow: 0 0 14px -3px color-mix(in srgb, var(--color-accent) 75%, transparent);
+  }
+  .neon-soft {
+    box-shadow: 0 0 10px -2px color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+
+  .field {
+    width: 100%;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-line);
+    background: var(--color-surface-3);
+    padding: 0.5rem 0.625rem;
+    font-size: 0.875rem;
+    color: var(--color-fg);
+    transition: border-color 120ms ease, background-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+  .field::placeholder {
+    color: var(--color-muted);
+  }
+  .field:hover {
+    border-color: var(--color-line-strong);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-accent-dim);
+    background: var(--color-surface-2);
+    /* Le champ actif s'allume aussi, mais vers l'intérieur : un halo
+       extérieur sur un champ de saisie ferait doublon avec le contour de
+       focus du navigateur. */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    transition: background-color 120ms ease, border-color 120ms ease,
+      color 120ms ease, box-shadow 120ms ease;
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
+    box-shadow: 0 0 16px -6px var(--color-accent);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--color-accent) 88%, white);
+    box-shadow: 0 0 20px -5px var(--color-accent);
+  }
+  .btn-ghost {
+    border: 1px solid var(--color-line);
+    color: var(--color-fg-dim);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--color-line-strong);
+    color: var(--color-fg);
+    background: var(--color-surface-2);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ── Titres ───────────────────────────────────────────────────────────
+     Archivo, c'est-à-dire la même famille que tout le reste de l'interface.
+
+     Big Shoulders donnait sa voix à l'app — une condensée de signalétique,
+     capitales hautes et étroites, du lettrage d'étiquetage de matériel. Elle
+     avait un défaut de fond : elle imposait les capitales. Un nom de fichier
+     comme KOFFR_—_LOGO_ANIMATION_BRIEF_D y devenait un mur de bâtons qu'on
+     ne lit plus, alors que c'est le titre de la page qu'on est en train de
+     regarder. Les titres reprennent donc la casse qu'on leur donne.
+
+     Une famille unique, différenciée par la graisse et le serrage : c'est la
+     mécanique des outils auxquels on se compare. Accessoirement, deux
+     fichiers de police en moins à servir — 65 Ko.
+
+     Serrage négatif : à partir de 20 px, Archivo en 700 laisse des blancs
+     inter-lettres qui font flotter le titre. Moins deux centièmes le
+     resserrent sans fermer les contreformes. */
+  .heading {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    /* 1,2 et pas moins : associé à `truncate`, qui masque le débordement,
+       une boîte de ligne plus courte que la capitale accentuée rasait
+       proprement l'accent aigu de « JÉRÔME » ou « RENTRÉE ». On perd des
+       accents sur des noms saisis par des Français — pas négociable pour
+       deux centièmes de serrage. */
+    line-height: 1.2;
+  }
+
+  /* Sous 18 px, le serrage négatif colle les lettres au lieu de tenir le
+     mot : on le relâche presque entièrement. Réglage optique, pas une
+     taille de plus. */
+  .heading-sm {
+    letter-spacing: -0.005em;
+  }
+
+  /* Le nom du produit, et lui seul. Capitales espacées : c'est un logotype,
+     il ne se lit pas, il se reconnaît — et c'est le seul endroit où la casse
+     n'est pas celle d'un contenu. */
+  .wordmark {
+    font-family: var(--font-sans);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  /* Hauteur de l'image bornée par la place réellement disponible, et non
+     par une fraction de la fenêtre. Avec `70vh`, l'en-tête, le fil
+     d'Ariane, la piste et la rangée de transport s'ajoutaient par-dessus :
+     sur un 13–14 pouces la barre de contrôle passait sous le bord bas et
+     il fallait défiler pour atteindre l'avance image par image.
+
+     La réserve couvre ce qui est au-dessus de l'image (en-tête, fil
+     d'Ariane) et la barre de contrôle au pire de ses trois rangées de
+     repères. La liste des raccourcis, elle, a le droit de tomber sous le
+     bord : on ne la consulte pas en regardant un plan. */
+  .player-picture {
+    max-height: max(15rem, calc(100dvh - 13.75rem));
+  }
+
+  /* ── Nappe froide ─────────────────────────────────────────────────────
+     Ce qui reste de l'ancienne ambiance : quatre nappes chaudes animées et
+     une photo de faisceau de projection sont remplacées par un seul dégradé
+     bleu, fixe. Rien ne bouge derrière une grille de vignettes, et rien ne
+     réchauffe un fond sur lequel on juge des images. */
+  .ambience-cool {
+    position: absolute;
+    inset: -20%;
+    background-image:
+      radial-gradient(34% 38% at 78% 4%, rgb(48 96 168 / 0.26), transparent 70%),
+      radial-gradient(38% 34% at 12% 30%, rgb(58 74 150 / 0.2), transparent 72%),
+      radial-gradient(36% 38% at 6% 96%, rgb(30 58 110 / 0.22), transparent 68%);
+  }
+
+  /* ── Guide de première visite ─────────────────────────────────────────
+     Le voile n'est pas un calque posé par-dessus mais l'ombre portée
+     démesurée du halo : c'est la seule façon d'obtenir un trou net, un
+     rectangle superposé ne pouvant pas être troué. */
+  .tour-halo {
+    pointer-events: none;
+    border: 1px solid var(--color-accent-dim);
+    box-shadow: 0 0 0 9999px rgb(7 9 14 / 0.8),
+      0 0 22px -4px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  }
+}
+
+/* Certains contrôles ne se montrent qu'au survol. Le guide les force
+   visibles le temps d'en parler, sinon il encadrerait du vide.
+   Volontairement **hors de tout `@layer`** : une règle posée dans une couche
+   perd contre `opacity-0`, qui vit dans la couche `utilities` de Tailwind,
+   et aucune spécificité n'y change rien — l'ordre des couches tranche avant
+   elle. Le non-couché, lui, passe devant le couché sans `!important`. */
+[data-tour-reveal="video-actions"] [data-tour="video-actions"] {
+  opacity: 1;
+}
+
+/* Apparition en cascade de la grille : une seule fois, au chargement. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  }
+}

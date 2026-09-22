@@ -1,0 +1,25 @@
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Données locales : base, vidéos déposées, vignettes. Jamais dans git.
+data/
+
+# Variables locales
+.env*.local
+
+# Sauvegardes produites par `npm run backup`, si elles atterrissent ici
+reviewer-backups/
+
+# Fichiers de travail des médias de fond : seules les versions servies,
+# dans public/bg/, ont leur place dans le dépôt.
+/*.mp4
+/*.mov
+
+# Réglages locaux de l'outillage : propres à une machine.
+.claude/settings.local.json
+
+# Systèmes
+.DS_Store
+Thumbs.db
