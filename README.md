@@ -51,7 +51,7 @@ aucun contenu client.</sub>
 Il faut **Node 20 ou plus**. Rien d'autre : ffmpeg et SQLite sont embarqués.
 
 ```bash
-git clone https://github.com/VOTRE-COMPTE/reviewer.git
+git clone https://github.com/Larivs/reviewer.git
 cd reviewer
 npm install
 npm run serve
