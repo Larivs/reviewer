@@ -172,7 +172,7 @@ export function VideoPlayer({
    * annulait la recherche en cours avant qu'elle n'aboutisse : le grand
    * lecteur restait figé sur l'image de départ pendant tout le geste, et ne
    * rattrapait qu'au relâchement. On ne garde donc qu'une seule demande en
-   * attente — toujours la plus récente — et on la sert quand la précédente
+   * attente, toujours la plus récente, et on la sert quand la précédente
    * a abouti (`seeked`). Le décodeur travaille en continu au lieu de
    * repartir de zéro, et l'image suit le curseur.
    *
@@ -627,7 +627,7 @@ export function VideoPlayer({
 
       {/* Conteneur de requête : la barre se replie selon la largeur de sa
           colonne, pas celle de la fenêtre. La même barre est à l'étroit à
-          1024 px en deux colonnes et au large à 960 px en une seule —
+          1024 px en deux colonnes et au large à 960 px en une seule -
           un point de rupture sur la fenêtre se tromperait dans les deux
           sens. */}
       <div className="@container border-t border-line bg-surface px-3 pb-2.5">
@@ -647,7 +647,7 @@ export function VideoPlayer({
         />
 
         {/* Sous 660 px la rangée passe sur deux lignes plutôt que de laisser
-            le groupe de droite — zoom, volume, vitesse, plein écran — se
+            le groupe de droite, zoom, volume, vitesse, plein écran, se
             faire couper : ces contrôles sortaient du cadre entre 1024 et
             1056 px, juste au passage en deux colonnes. */}
         <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 @min-[660px]:grid-cols-[1fr_auto_1fr]">
@@ -696,11 +696,11 @@ export function VideoPlayer({
           </div>
 
           {/* Afficheur central. Un clic change de lecture : timecode,
-              numéro d'image ou secondes — chacun a sa préférence. */}
+              numéro d'image ou secondes, chacun a sa préférence. */}
           <button
             type="button"
             onClick={cycleTcMode}
-            title={`Affichage : ${tcMode} — cliquer pour changer`}
+            title={`Affichage : ${tcMode}, cliquer pour changer`}
             className="tc-plate justify-self-end text-[13px] transition-colors hover:border-line-strong @min-[660px]:justify-self-center"
           >
             <span className="text-accent">{readout.value}</span>

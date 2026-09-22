@@ -22,14 +22,14 @@ const MIN_GAP_MS = 30_000;
  *
  * **Pourquoi pas une route JSON comme pour les notes.** Ce précédent existe
  * pour une raison nommée : ne pas re-rendre la route de la page de review, où
- * un lecteur vidéo est en train de jouer. Cette raison est absente ici — pas
+ * un lecteur vidéo est en train de jouer. Cette raison est absente ici, pas
  * de `<video>`, pas de Suspense autour de la grille. Reproduire la forme
  * quand le motif a disparu, ce serait dupliquer côté client une logique de
  * rendu qui existe déjà côté serveur, avec deux sources de vérité à tenir
  * d'accord. Mesuré dans le navigateur avant de trancher : un
  * `router.refresh()` ne remonte aucun nœud de la grille (une propriété posée
  * à la main sur un nœud du DOM y survit), ne rejoue pas la cascade `rise`
- * — zéro animation relancée — et laisse intacts un panneau de renommage
+ *, zéro animation relancée, et laisse intacts un panneau de renommage
  * ouvert et son texte en cours de saisie.
  *
  * **Placement.** Monté ici, dans `folder-browser`, plutôt que dans les deux
@@ -66,7 +66,7 @@ export function LiveGrid() {
    * Pas de test sur l'élément qui a le focus, contrairement à ce qu'on
    * pourrait croire utile : tous les champs de la grille sont déjà dans un
    * panneau marqué `data-busy`, et surtout une liste déroulante native
-   * **garde le focus après sélection** — changer un statut aurait donc figé
+   * **garde le focus après sélection**, changer un statut aurait donc figé
    * la grille jusqu'au prochain clic ailleurs.
    */
   const occupied = useCallback(() => {

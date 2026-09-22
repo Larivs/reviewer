@@ -30,7 +30,7 @@ function refresh() {
  * Le mot de passe n'est rendu **qu'une fois**, au moment de la création ou
  * d'une réinitialisation. Il n'est stocké nulle part en clair : si
  * l'administrateur ferme la page sans l'avoir transmis, il en régénère un.
- * C'est volontairement plus rude qu'un rappel — un mot de passe qu'on peut
+ * C'est volontairement plus rude qu'un rappel, un mot de passe qu'on peut
  * relire plus tard est un mot de passe qui traîne.
  */
 export type PasswordResult =
@@ -168,7 +168,7 @@ export async function deleteAccountAction(userId: string): Promise<ActionResult>
 }
 
 /**
- * Empêche l'espace de se retrouver sans administrateur — par rétrogradation
+ * Empêche l'espace de se retrouver sans administrateur, par rétrogradation
  * comme par suppression. Sans ce garde-fou, plus personne ne pourrait créer
  * ni rétablir un compte, et il faudrait rouvrir la base à la main.
  */

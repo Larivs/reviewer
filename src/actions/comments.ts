@@ -154,7 +154,7 @@ export async function toggleCommentResolvedAction(
  * Répondre à une note, **y compris celle d'un autre**. C'est tout l'objet du
  * fil : jusqu'ici, contester ou préciser une note demandait d'en écrire une
  * seconde au même timecode, et la piste se retrouvait avec deux repères pour
- * une seule question. Modifier la note d'autrui reste interdit — on ajoute
+ * une seule question. Modifier la note d'autrui reste interdit, on ajoute
  * sous la sienne, on ne réécrit pas la sienne.
  */
 export async function createReplyAction(

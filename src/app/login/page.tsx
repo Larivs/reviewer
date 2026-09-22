@@ -26,8 +26,8 @@ export default async function LoginPage() {
   // La liste déroulante était pratique à trois personnes qui se connaissent.
   // Avec des clients, elle devient un annuaire : le client Renault y lirait
   // le nom du client Decathlon, donc l'existence d'un concurrent chez le
-  // même prestataire. Les comptes du studio y restent — ce sont eux qui se
-  // connectent tous les jours — et tout le monde peut saisir son nom.
+  // même prestataire. Les comptes du studio y restent, ce sont eux qui se
+  // connectent tous les jours, et tout le monde peut saisir son nom.
   const names = db
     .select({ name: users.name })
     .from(users)
@@ -39,7 +39,7 @@ export default async function LoginPage() {
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden px-6">
       {/* Bobine qui tourne : la masse est à gauche, le centre droit reste
-          vide — c'est là que se pose le formulaire. */}
+          vide, c'est là que se pose le formulaire. */}
       <LoginBackdrop />
       {/* Voile : garantit le contraste du formulaire quelle que soit la
           taille de fenêtre, et assombrit les bords pour concentrer l'œil. */}
@@ -54,7 +54,7 @@ export default async function LoginPage() {
 
       {/* Colonne élargie de 340 à 400 px : le texte de cet écran a été
           grossi, et il fallait la place pour qu'il respire. C'est le seul
-          écran de l'app sans interface dense — il peut se permettre d'être
+          écran de l'app sans interface dense, il peut se permettre d'être
           lisible de loin, contrairement à la page de review où chaque pixel
           pris au texte est un pixel d'image en moins. */}
       <div className="relative w-full max-w-[400px]">

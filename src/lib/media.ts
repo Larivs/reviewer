@@ -13,7 +13,7 @@ const FFPROBE = ffprobeStatic.path;
 /**
  * Codecs que les navigateurs savent décoder. Volontairement restrictif :
  * mieux vaut refuser à l'upload que livrer une vidéo qui ne se lira pas.
- * HEVC est exclu — son support dépend de l'OS et du navigateur.
+ * HEVC est exclu, son support dépend de l'OS et du navigateur.
  */
 const VIDEO_CODECS = new Set(["h264", "vp8", "vp9", "av1"]);
 const AUDIO_CODECS = new Set(["aac", "mp3", "opus", "vorbis", "flac"]);
@@ -86,7 +86,7 @@ export async function probe(filePath: string): Promise<Probe> {
 
 /**
  * Vérifie que le navigateur pourra lire le fichier, et explique quoi faire
- * sinon — un message vague enverrait le monteur ré-exporter au hasard.
+ * sinon, un message vague enverrait le monteur ré-exporter au hasard.
  */
 export function playbackProblem(p: Probe): string | null {
   if (!p.videoCodec) return "Ce fichier ne contient pas de piste vidéo.";

@@ -31,7 +31,7 @@ export function VideoCard({
   /**
    * Renommer, déplacer, supprimer. Faux pour un invité : il commente la
    * vidéo d'un autre, il ne range pas sa bibliothèque. Les actions serveur
-   * refusent de toute façon — ce drapeau évite juste de montrer trois
+   * refusent de toute façon, ce drapeau évite juste de montrer trois
    * boutons qui répondraient « tu n'as pas les droits ».
    */
   canManage?: boolean;
@@ -92,7 +92,7 @@ export function VideoCard({
       /* `data-busy` : contrat lu par `live-grid`. Tant que cet attribut est
          présent quelque part dans la page, le sondage reporte son tour et ne
          re-rend pas la route. **Tout nouveau panneau de ce genre doit le
-         porter** — sinon il se fera rafraîchir sous les doigts. */
+         porter**, sinon il se fera rafraîchir sous les doigts. */
       <form
         data-busy
         onSubmit={submitRename}
@@ -148,7 +148,7 @@ export function VideoCard({
         </p>
         {/* `select` natif, comme le sélecteur de statut : clavier, tactile et
             liste système gratuits. Le dossier courant reste dans la liste,
-            marqué « ici » — le retirer ferait sauter les positions à chaque
+            marqué « ici », le retirer ferait sauter les positions à chaque
             réouverture, on ne saurait plus d'où part le fichier. */}
         <select
           value={chosen}
@@ -160,12 +160,12 @@ export function VideoCard({
           onKeyDown={(e) => e.key === "Escape" && reset()}
         >
           <option value={ROOT}>
-            Projets (racine){here === ROOT ? " — ici" : ""}
+            Projets (racine){here === ROOT ? " (ici)" : ""}
           </option>
           {folders.map((folder) => (
             <option key={folder.id} value={folder.id}>
               {folder.label}
-              {folder.id === here ? " — ici" : ""}
+              {folder.id === here ? " (ici)" : ""}
             </option>
           ))}
         </select>
@@ -224,7 +224,7 @@ export function VideoCard({
     <div className="group relative overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong">
       {/* Le lien couvre la carte, aperçu compris. Il était en `z-0`, donc
           en dessous du conteneur de vignette qui le suit dans le DOM : un
-          clic sur l'image — le geste le plus naturel — ne faisait rien, et
+          clic sur l'image, le geste le plus naturel, ne faisait rien, et
           seul le bandeau du bas ouvrait la vidéo. Les vrais contrôles
           (statut, renommer, supprimer) repassent au-dessus en `z-20`. */}
       <Link
@@ -237,7 +237,7 @@ export function VideoCard({
         {thumbBroken ? (
           /* La marque en filigrane plutôt qu'une phrase seule au milieu du
              noir : c'est une amorce vierge, pas une erreur. Et le logo est
-             exactement le sujet — quatre repères autour d'un point. */
+             exactement le sujet, quatre repères autour d'un point. */
           <div className="grid h-full place-content-center justify-items-center gap-2">
             <Logo className="size-7 text-line-strong" />
             <span className="label">Pas d&apos;aperçu</span>
@@ -263,10 +263,10 @@ export function VideoCard({
           <span
             title={`${video.openComments} note${video.openComments > 1 ? "s" : ""} en attente`}
             /* Le filet sombre n'est pas décoratif : la pastille est posée
-               sur une image qu'on ne choisit pas. Sur une mire, l'ambre
+               sur une image qu'on ne choisit pas. Sur une mire, l'accent
                plein tombait à touche-touche sur la barre rouge et le
                signal se noyait dans le motif. Le cerne la détache de
-               n'importe quel fond sans lui retirer son aplat — et c'est
+               n'importe quel fond sans lui retirer son aplat, et c'est
                l'aplat qui dit « ça demande attention ». */
             className="absolute left-1.5 top-1.5 rounded-sm bg-accent px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-accent-fg ring-1 ring-bg/70"
           >

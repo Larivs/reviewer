@@ -10,7 +10,7 @@ export type TourStep = {
   /** Geste ou raccourci à retenir, posé en pastille sous le texte. */
   hint?: string;
   /**
-   * La cible ne se montre qu'au survol — les boutons d'action d'une
+   * La cible ne se montre qu'au survol, les boutons d'action d'une
    * vignette. Le guide la force visible le temps de l'étape, sinon le halo
    * encadrerait du vide.
    */
@@ -34,7 +34,7 @@ type Box = { top: number; left: number; width: number; height: number };
 /**
  * Où poser la bulle. Sous la cible s'il y a la place, au-dessus sinon, et
  * **à côté** quand la cible est trop haute pour laisser quoi que ce soit
- * dans l'axe vertical — le panneau de notes fait presque toute la hauteur
+ * dans l'axe vertical, le panneau de notes fait presque toute la hauteur
  * de la fenêtre, et sans ce troisième cas la bulle sortait par le haut.
  *
  * On se contente d'estimer la hauteur de la bulle : la mesurer imposerait
@@ -92,8 +92,8 @@ function findTarget(step: TourStep | undefined) {
 
 /**
  * Guide de première visite : un halo sur l'élément dont on parle, une bulle
- * à côté, et on avance. Deux tours existent — la page des projets et
- * l'espace de review — chacun lancé au premier passage sur sa page, ce qui
+ * à côté, et on avance. Deux tours existent, la page des projets et
+ * l'espace de review, chacun lancé au premier passage sur sa page, ce qui
  * met l'explication au moment où elle sert plutôt que tout d'un bloc à la
  * connexion.
  */
@@ -167,7 +167,7 @@ export function Tour({ id, steps }: { id: string; steps: TourStep[] }) {
     const follow = () => {
       // La cible peut disparaître sous le guide : quelqu'un d'autre supprime
       // la vidéo encadrée et la grille se met à jour. `getBoundingClientRect`
-      // sur un nœud détaché ne lève pas d'erreur, il renvoie des zéros — le
+      // sur un nœud détaché ne lève pas d'erreur, il renvoie des zéros, le
       // halo s'effondrerait en petit carré dans le coin haut-gauche. On lâche
       // la cible et la bulle se recentre, ce qui se lit comme une étape sans
       // cible plutôt que comme un défaut d'affichage.
@@ -178,8 +178,8 @@ export function Tour({ id, steps }: { id: string; steps: TourStep[] }) {
 
       const rect = element.getBoundingClientRect();
       const signature = `${rect.top}|${rect.left}|${rect.width}|${rect.height}`;
-      // Le halo colle à la cible image par image — panneau qui défile,
-      // fenêtre qu'on redimensionne, piste qui s'épaissit — mais on ne
+      // Le halo colle à la cible image par image, panneau qui défile,
+      // fenêtre qu'on redimensionne, piste qui s'épaissit, mais on ne
       // rend que quand elle a vraiment bougé.
       if (signature !== previous) {
         previous = signature;
@@ -209,7 +209,7 @@ export function Tour({ id, steps }: { id: string; steps: TourStep[] }) {
    * Le guide publie qu'il est à l'écran, sur le même chemin que
    * `tourReveal`. Le sondage de la grille le lit pour reporter son tour :
    * faire bouger la cible sous le halo pendant une explication n'apporte
-   * rien. Publié plutôt que deviné — un sélecteur du genre
+   * rien. Publié plutôt que deviné, un sélecteur du genre
    * `[role="dialog"]` marcherait aujourd'hui et casserait au premier autre
    * dialogue de l'app, sans rien pour le signaler.
    */
@@ -274,7 +274,7 @@ export function Tour({ id, steps }: { id: string; steps: TourStep[] }) {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Guide — ${step.title}`}
+      aria-label={`Guide, ${step.title}`}
       className="fixed inset-0 z-50"
     >
       {/* Absorbe les clics : on ne part pas ailleurs au milieu d'une

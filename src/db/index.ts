@@ -46,7 +46,7 @@ function connect() {
   // Défaut volontairement à 'admin' et non 'membre' : cette colonne arrive
   // sur une base où les comptes existants voyaient et faisaient déjà tout.
   // Les rétrograder en silence leur retirerait des droits sans que personne
-  // ne l'ait demandé — on préfère qu'ils gardent les leurs et que le premier
+  // ne l'ait demandé, on préfère qu'ils gardent les leurs et que le premier
   // admin en redescende qui il veut depuis la page des comptes.
   ensureColumn(sqlite, "users", "role", "TEXT NOT NULL DEFAULT 'admin'");
   ensureColumn(sqlite, "users", "invited_via", "TEXT");

@@ -25,7 +25,7 @@ export type { LinkDuration, ShareTarget };
  * Le parti pris est la friction zéro. Le client ne crée pas de compte, ne
  * choisit pas de mot de passe, n'en reçoit pas : il clique, donne son
  * prénom, commente. L'app lui fabrique une identité d'invité pour que ses
- * notes soient signées — sans auteur, une review à plusieurs devient
+ * notes soient signées, sans auteur, une review à plusieurs devient
  * illisible.
  *
  * La contrepartie est assumée : **qui détient le lien entre**. Le garde-fou
@@ -36,7 +36,7 @@ export type { LinkDuration, ShareTarget };
 /**
  * Jeton de l'URL. 160 bits tirés au hasard : il n'est pas deviné, et c'est
  * la seule chose qui protège l'accès. L'alphabet est celui des mots de
- * passe générés — on écarte ce qui se lit mal si quelqu'un le recopie à la
+ * passe générés, on écarte ce qui se lit mal si quelqu'un le recopie à la
  * main depuis un message.
  */
 function makeToken() {
@@ -132,7 +132,7 @@ export function listShareLinks(): LinkRow[] {
  * Les comptes nés du lien **restent**, et leurs notes avec : effacer la
  * review d'un client parce qu'on ferme un lien serait une perte de travail,
  * pas une mesure de sécurité. On retire leurs droits et on coupe leurs
- * sessions — ils ne voient plus rien, mais ce qu'ils ont écrit demeure.
+ * sessions, ils ne voient plus rien, mais ce qu'ils ont écrit demeure.
  */
 export function deleteShareLink(linkId: string) {
   const guests = db
@@ -157,7 +157,7 @@ export function deleteShareLink(linkId: string) {
  *
  * Reconnaître quelqu'un sur son seul prénom serait une usurpation facile
  * ailleurs ; ici ça ne l'est pas : **il faut déjà détenir le lien**, qui
- * donne le même accès de toute façon. Le gain est réel — sans ça, un client
+ * donne le même accès de toute façon. Le gain est réel, sans ça, un client
  * dont le cookie a expiré reviendrait sous « Marie (2) » et perdrait le fil
  * de ses propres notes.
  */

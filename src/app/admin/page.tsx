@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * Les comptes de l'espace.
  *
  * Une instance = un espace : Hugo fait tourner la sienne, Jérôme la sienne.
- * Il n'y a donc rien à administrer au-dessus — seulement qui entre ici, avec
+ * Il n'y a donc rien à administrer au-dessus, seulement qui entre ici, avec
  * quel rôle, et sur quels projets.
  *
  * `requireAdmin` rend un 404 et non un refus : un membre n'a pas à découvrir
@@ -38,7 +38,7 @@ export default async function AdminPage() {
           <h1 className="heading mt-1.5 text-[26px]">Comptes</h1>
           <p className="mt-1.5 max-w-[60ch] text-sm text-muted">
             Cette instance est ton espace. Les comptes que tu ouvres ici s&apos;y
-            connectent depuis le réseau — un membre voit tout, un invité ne voit
+            connectent depuis le réseau, un membre voit tout, un invité ne voit
             que les projets que tu lui coches.
           </p>
         </div>

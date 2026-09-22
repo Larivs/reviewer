@@ -8,7 +8,7 @@
  *
  * 1. GARDE-FOU SUR L'AUTHENTIFICATION. `AUTH_DISABLED=1` ouvre l'app sans
  *    écran de connexion. Sur le poste du développeur c'est commode ; sur un
- *    réseau où deux autres personnes attendent, c'est un partage ouvert —
+ *    réseau où deux autres personnes attendent, c'est un partage ouvert -
  *    il suffit de deviner une URL pour lire, écrire, supprimer. Le script
  *    **refuse de démarrer** dans cet état plutôt que d'afficher un
  *    avertissement de plus : on lance ce script en partant chercher un café,
@@ -59,7 +59,7 @@ const source = authDisabledFrom();
 if (source) {
   console.error(
     "\n" +
-      red("  ✗ Démarrage refusé — l'authentification est désactivée.") +
+      red("  ✗ Démarrage refusé, l'authentification est désactivée.") +
       "\n\n" +
       `    AUTH_DISABLED=1 vient de ${source}.\n` +
       "    Dans cet état l'app n'a aucun contrôle d'accès : la poser sur le\n" +
@@ -98,7 +98,7 @@ if (builtAt === 0 || changedAt > builtAt) {
     cwd: ROOT,
   });
   if (build.status !== 0) {
-    console.error(red("\n  ✗ La compilation a échoué — rien n'a été démarré.\n"));
+    console.error(red("\n  ✗ La compilation a échoué, rien n'a été démarré.\n"));
     process.exit(build.status ?? 1);
   }
 }
@@ -110,8 +110,8 @@ function addresses() {
     for (const net of list ?? []) {
       if (net.family !== "IPv4" || net.internal) continue;
       // 169.254.x.x : adresse auto-attribuée quand aucun DHCP n'a répondu.
-      // Elle apparaît sur les interfaces inactives — Bluetooth, Ethernet
-      // non branché — et ne mène nulle part. L'afficher enverrait Hugo ou
+      // Elle apparaît sur les interfaces inactives, Bluetooth, Ethernet
+      // non branché, et ne mène nulle part. L'afficher enverrait Hugo ou
       // Jérôme sur une fausse piste.
       if (net.address.startsWith("169.254.")) continue;
       found.push({

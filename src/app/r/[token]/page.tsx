@@ -28,7 +28,7 @@ export default async function JoinPage({
 
   if (!link || linkIsExpired(link)) return <Dead />;
 
-  // Déjà dans la place — le studio qui vérifie son propre lien, ou le client
+  // Déjà dans la place, le studio qui vérifie son propre lien, ou le client
   // qui revient avec son cookie. On ne lui redemande pas son prénom.
   const viewer = await getViewer();
   if (viewer) redirect(linkDestination(link));

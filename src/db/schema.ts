@@ -39,7 +39,7 @@ export const users = sqliteTable("users", {
 
 /**
  * Portée d'un invité : les projets qui lui sont ouverts. Un droit posé sur un
- * dossier descend dans ses sous-dossiers — sinon il faudrait le redonner à
+ * dossier descend dans ses sous-dossiers, sinon il faudrait le redonner à
  * chaque sous-dossier créé, et un oubli rendrait du contenu invisible à celui
  * qui doit le commenter.
  *
@@ -51,7 +51,7 @@ export const users = sqliteTable("users", {
  * une vidéo à qui l'a.
  *
  * Exactement l'un des deux champs de portée est renseigné. Un lien vers une
- * seule vidéo est le geste le plus courant — « voilà le montage » — et un
+ * seule vidéo est le geste le plus courant, « voilà le montage », et un
  * lien vers un projet sert au client récurrent qui suivra les versions.
  *
  * Pas de mot de passe et pas de journal d'accès : le choix assumé est la

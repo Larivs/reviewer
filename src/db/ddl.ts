@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE INDEX IF NOT EXISTS comments_video_idx ON comments(video_id, timecode);
 
 /* Réponses à une note. Table séparée plutôt qu'un "parent_id" sur "comments" :
-   tout le reste de l'app — repères de la piste, note sous la tête de lecture,
-   numérotation, filtres — part du principe qu'une ligne de "comments" est une
+   tout le reste de l'app, repères de la piste, note sous la tête de lecture,
+   numérotation, filtres, part du principe qu'une ligne de "comments" est une
    note posée à un timecode. Une réponse n'en est pas une, elle n'a ni
    timecode, ni dessin, ni état résolu. Les mélanger obligerait à filtrer
    partout, et il suffirait d'un oubli pour qu'une réponse apparaisse comme un

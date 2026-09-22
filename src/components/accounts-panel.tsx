@@ -46,7 +46,7 @@ function PasswordCard({
   return (
     <div className="mt-3 rounded-lg border border-accent-dim bg-accent/[0.07] p-3">
       <p className="text-sm text-fg">
-        Mot de passe de <strong>{result.name}</strong> — transmets-le
+        Mot de passe de <strong>{result.name}</strong>, transmets-le
         maintenant, il ne sera plus affiché.
       </p>
       <div className="mt-2 flex flex-wrap items-center gap-2">

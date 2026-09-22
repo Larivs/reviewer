@@ -3,7 +3,7 @@ import type { VideoStatus } from "@/db/schema";
 
 /** `1:04` ou `1:02:03` selon la durée. */
 export function formatDuration(seconds: number | null): string {
-  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "-";
 
   const total = Math.round(seconds);
   const h = Math.floor(total / 3600);
@@ -33,7 +33,7 @@ export function formatSize(bytes: number): string {
  * de la machine et le navigateur celui du visiteur : deux valeurs différentes
  * pour la même date, et React signale une incohérence d'hydratation.
  *
- * Le préfixe `NEXT_PUBLIC_` n'est pas décoratif — il fait remplacer la valeur
+ * Le préfixe `NEXT_PUBLIC_` n'est pas décoratif, il fait remplacer la valeur
  * à la compilation, des deux côtés. Une variable serveur ordinaire vaudrait
  * `undefined` dans le navigateur, et on retomberait exactement sur le
  * problème qu'on cherche à éviter.
@@ -72,14 +72,14 @@ export const STATUS_CLASSES: Record<VideoStatus, string> = {
 };
 
 /**
- * `22/09 10:18` — la même date, en deux fois moins de place.
+ * `22/09 10:18`, la même date, en deux fois moins de place.
  *
  * Dans une carte de note, la date pesait 111 px sur les 300 de la ligne : plus
  * que le timecode, et pour l'information dont on se sert le moins. La forme
  * longue reste accessible en infobulle via `formatDateTime`.
  *
  * Aucune notion de « aujourd'hui » : un libellé relatif dépendrait de
- * l'instant du rendu, donc du serveur puis du navigateur — soit une
+ * l'instant du rendu, donc du serveur puis du navigateur, soit une
  * incohérence d'hydratation garantie un jour à minuit.
  */
 const SHORT_DATE_FORMAT = new Intl.DateTimeFormat(LOCALE, {

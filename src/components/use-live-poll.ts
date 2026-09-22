@@ -30,8 +30,8 @@ type Options = {
  * l'app : la liste des notes de la page de review et la grille des projets.
  *
  * Un seul ordonnanceur, **deux transports**. Les deux pages n'ont pas les
- * mêmes contraintes — l'une ne doit pas toucher au lecteur vidéo et ne
- * récupère donc que du JSON, l'autre peut re-rendre sa route entière — mais
+ * mêmes contraintes, l'une ne doit pas toucher au lecteur vidéo et ne
+ * récupère donc que du JSON, l'autre peut re-rendre sa route entière, mais
  * elles ont exactement la même politique de déclenchement. Dupliquer cette
  * politique, c'était s'engager à corriger deux fois le même défaut de
  * cadence ; c'est justement ce qui est arrivé une première fois.
@@ -44,7 +44,7 @@ type Options = {
  *   le vrai travail : on revient sur l'app, c'est à jour. La cadence de fond
  *   n'est que le filet pour la fenêtre laissée ouverte devant soi.
  * - **Plancher anti-rafale.** Sans lui, alterner rapidement entre deux
- *   fenêtres tire un tour à chaque bascule — mesuré à l'instrumentation :
+ *   fenêtres tire un tour à chaque bascule, mesuré à l'instrumentation :
  *   une requête toutes les 5 s là où cinq minutes étaient demandées, le
  *   garde-fou étant devenu le vrai rythme.
  * - **Le plancher ne réarme pas.** Un tour refusé par le plancher rend la
@@ -107,7 +107,7 @@ export function useLivePoll(
         return;
       }
       if (Date.now() - lastAt < minGapMs) {
-        // Plancher franchi trop tôt — un rattrapage vient de passer. On rend
+        // Plancher franchi trop tôt, un rattrapage vient de passer. On rend
         // la main à la cadence normale sans jamais la raccourcir : c'est ce
         // raccourcissement qui transformait le va-et-vient en tempête.
         if (scheduled) arm(pollMs);

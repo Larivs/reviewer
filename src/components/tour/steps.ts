@@ -31,7 +31,7 @@ export const PROJECTS_TOUR: TourStep[] = [
     target: "video-card",
     title: "La vignette",
     body:
-      "Le statut se change ici, sans ouvrir la vidéo. La pastille ambre en haut à gauche de l'image compte les notes encore ouvertes — c'est ce qu'on regarde en arrivant.",
+      "Le statut se change ici, sans ouvrir la vidéo. La pastille bleue en haut à gauche de l'image compte les notes encore ouvertes, c'est ce qu'on regarde en arrivant.",
   },
   {
     target: "video-actions",
@@ -80,6 +80,6 @@ export const REVIEW_TOUR: TourStep[] = [
     target: "shortcuts",
     title: "Le clavier",
     body:
-      "Les flèches avancent d'une image, Maj les fait sauter d'une seconde. C'est là qu'on gagne du temps sur une review longue — la liste complète reste dépliable.",
+      "Les flèches avancent d'une image, Maj les fait sauter d'une seconde. C'est là qu'on gagne du temps sur une review longue, la liste complète reste dépliable.",
   },
 ];

@@ -59,7 +59,7 @@ export function listVideos(
     return withOpenCounts(granted);
   }
 
-  // Hors de la portée, il n'y a rien à montrer — et surtout rien à compter :
+  // Hors de la portée, il n'y a rien à montrer, et surtout rien à compter :
   // même un décompte de notes renseignerait sur un projet qu'on ne doit pas
   // savoir exister.
   if (!scopeAllowsFolder(scope, folderId)) return [];

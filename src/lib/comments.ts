@@ -16,7 +16,7 @@ export type CommentReply = {
   commentId: string;
   userId: string;
   authorName: string;
-  /** Rang de couleur de l'auteur — voir `lib/user-colors`. */
+  /** Rang de couleur de l'auteur, voir `lib/user-colors`. */
   authorColor: number;
   body: string;
   createdAt: number;
@@ -27,7 +27,7 @@ export type CommentWithAuthor = {
   videoId: string;
   userId: string;
   authorName: string;
-  /** Rang de couleur de l'auteur — voir `lib/user-colors`. */
+  /** Rang de couleur de l'auteur, voir `lib/user-colors`. */
   authorColor: number;
   timecode: number;
   /** Fin de plage, ou `null` pour une note posée sur un instant unique. */

@@ -48,7 +48,7 @@
 /* ── Jetons ─────────────────────────────────────────────────────────────
    Bleu-noir, presque neutre : le gris d'un outil vidéo contemporain, tiré
    juste assez vers le bleu pour que l'accent néon ait une famille plutôt que
-   d'être posé sur un fond étranger. L'accent est un bleu électrique — le
+   d'être posé sur un fond étranger. L'accent est un bleu électrique, le
    signal, réservé à ce qui est actif ou attend une action, jamais décoratif.
 
    La règle n'a pas changé, seule la teinte a tourné. L'ambre a entièrement
@@ -59,7 +59,7 @@
   /* Les paliers restent volontairement écartés. En dessous d'environ quatre
      points de luminance l'œil ne les sépare plus : les cartes se collent au
      fond et l'interface entière lit comme un état désactivé. La teinte, elle,
-     ne bouge pas — on reste dans le même bleu-noir d'un bout à l'autre. */
+     ne bouge pas, on reste dans le même bleu-noir d'un bout à l'autre. */
   --color-bg: #07090e;
   --color-surface: #0f131b;
   --color-surface-2: #161c27;
@@ -71,7 +71,7 @@
   --color-fg-dim: #b4bdcc;
   /* #828d9f et non #7d889b : sur les nouvelles surfaces, plus sombres et
      plus bleues que les anciennes, la valeur d'origine retombait à 4,85:1.
-     Deux points de clarté la ramènent à 5,2:1 — la date d'une note et les
+     Deux points de clarté la ramènent à 5,2:1, la date d'une note et les
      micro-libellés sont du texte de 10 px, ils n'ont pas de marge. */
   --color-muted: #828d9f;
 
@@ -105,7 +105,7 @@ html {
 body {
   /* Une seule lueur froide, très basse, retombant du haut : assez pour que
      le fond ne soit pas un aplat mort, trop peu pour qu'on la remarque. Le
-     grain de pellicule qui couvrait tout l'écran a été retiré — c'est la
+     grain de pellicule qui couvrait tout l'écran a été retiré, c'est la
      texture qui datait le plus l'interface, et elle brouillait les aplats
      qu'on cherche maintenant. */
   background-color: var(--color-bg);
@@ -148,7 +148,7 @@ body {
   }
 
   /* Donnée secondaire : date, durée, compte. Cousine de `.label`, dont elle
-     abandonne les capitales et l'espacement — c'est ce qui rend `.label`
+     abandonne les capitales et l'espacement, c'est ce qui rend `.label`
      lisible en étiquette d'un mot et illisible sur « 22 sept., 10:18 », où
      l'œil doit reconstruire quinze caractères sans forme de mot à quoi se
      raccrocher. Un cran plus clair aussi : ces valeurs se lisent, elles ne
@@ -163,7 +163,7 @@ body {
 
   /* Commande discrète d'une carte : « Résoudre », « Répondre ». En `.label`
      elles criaient en capitales tout en étant le texte le plus pâle de la
-     carte — deux défauts contraires. Bas-de-casse, un point de plus, et la
+     carte, deux défauts contraires. Bas-de-casse, un point de plus, et la
      couleur du texte secondaire : ce sont des boutons, ils doivent se lire. */
   .card-action {
     font-size: 11px;
@@ -196,7 +196,7 @@ body {
      bleu vif d'un bleu *néon* : la couleur déborde légèrement de la forme,
      comme un tube qui éclaire le mur derrière lui.
 
-     Réservé à trois objets — le bouton primaire, la portion lue de la piste,
+     Réservé à trois objets, le bouton primaire, la portion lue de la piste,
      la tête de lecture. En mettre partout reviendrait à n'en mettre nulle
      part, et un halo sous chaque bordure rend une interface floue. */
   .neon {
@@ -273,16 +273,16 @@ body {
   /* ── Titres ───────────────────────────────────────────────────────────
      Archivo, c'est-à-dire la même famille que tout le reste de l'interface.
 
-     Big Shoulders donnait sa voix à l'app — une condensée de signalétique,
+     Big Shoulders donnait sa voix à l'app, une condensée de signalétique,
      capitales hautes et étroites, du lettrage d'étiquetage de matériel. Elle
      avait un défaut de fond : elle imposait les capitales. Un nom de fichier
-     comme KOFFR_—_LOGO_ANIMATION_BRIEF_D y devenait un mur de bâtons qu'on
+     comme HABILLAGE_SAISON_2_V2_RELECTURE y devenait un mur de bâtons
      ne lit plus, alors que c'est le titre de la page qu'on est en train de
      regarder. Les titres reprennent donc la casse qu'on leur donne.
 
      Une famille unique, différenciée par la graisse et le serrage : c'est la
      mécanique des outils auxquels on se compare. Accessoirement, deux
-     fichiers de police en moins à servir — 65 Ko.
+     fichiers de police en moins à servir, 65 Ko.
 
      Serrage négatif : à partir de 20 px, Archivo en 700 laisse des blancs
      inter-lettres qui font flotter le titre. Moins deux centièmes le
@@ -294,7 +294,7 @@ body {
     /* 1,2 et pas moins : associé à `truncate`, qui masque le débordement,
        une boîte de ligne plus courte que la capitale accentuée rasait
        proprement l'accent aigu de « JÉRÔME » ou « RENTRÉE ». On perd des
-       accents sur des noms saisis par des Français — pas négociable pour
+       accents sur des noms saisis par des Français, pas négociable pour
        deux centièmes de serrage. */
     line-height: 1.2;
   }
@@ -307,7 +307,7 @@ body {
   }
 
   /* Le nom du produit, et lui seul. Capitales espacées : c'est un logotype,
-     il ne se lit pas, il se reconnaît — et c'est le seul endroit où la casse
+     il ne se lit pas, il se reconnaît, et c'est le seul endroit où la casse
      n'est pas celle d'un contenu. */
   .wordmark {
     font-family: var(--font-sans);
@@ -319,7 +319,7 @@ body {
   /* Hauteur de l'image bornée par la place réellement disponible, et non
      par une fraction de la fenêtre. Avec `70vh`, l'en-tête, le fil
      d'Ariane, la piste et la rangée de transport s'ajoutaient par-dessus :
-     sur un 13–14 pouces la barre de contrôle passait sous le bord bas et
+     sur un 13-14 pouces la barre de contrôle passait sous le bord bas et
      il fallait défiler pour atteindre l'avance image par image.
 
      La réserve couvre ce qui est au-dessus de l'image (en-tête, fil
@@ -360,7 +360,7 @@ body {
    visibles le temps d'en parler, sinon il encadrerait du vide.
    Volontairement **hors de tout `@layer`** : une règle posée dans une couche
    perd contre `opacity-0`, qui vit dans la couche `utilities` de Tailwind,
-   et aucune spécificité n'y change rien — l'ordre des couches tranche avant
+   et aucune spécificité n'y change rien, l'ordre des couches tranche avant
    elle. Le non-couché, lui, passe devant le couché sans `!important`. */
 [data-tour-reveal="video-actions"] [data-tour="video-actions"] {
   opacity: 1;

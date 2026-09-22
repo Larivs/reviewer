@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * Aucun secret à transmettre pour protéger cette page : elle ne s'affiche
  * que tant qu'aucun compte n'existe, et la fenêtre se referme d'elle-même à
  * la seconde où le premier est créé. L'action serveur revérifie la même
- * condition — la page seule ne protège rien.
+ * condition, la page seule ne protège rien.
  */
 export default async function InstallPage() {
   if (await instanceIsInstalled()) redirect("/login");

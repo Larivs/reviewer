@@ -32,7 +32,7 @@ function split(total: number) {
 const pad = (n: number, width = 2) => String(Math.floor(n)).padStart(width, "0");
 
 /**
- * `HH:MM:SS:FF` — la notation des logiciels de montage, celle que Hugo et
+ * `HH:MM:SS:FF`, la notation des logiciels de montage, celle que Hugo et
  * Jérôme liront dans leur timeline. Sans cadence connue, on retombe sur des
  * centièmes plutôt que d'inventer un numéro d'image.
  */

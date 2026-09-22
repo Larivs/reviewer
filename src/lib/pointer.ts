@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * `setPointerCapture` lève si le pointeur n'est plus actif — cela arrive
+ * `setPointerCapture` lève si le pointeur n'est plus actif, cela arrive
  * quand le navigateur l'a déjà relâché. La capture est un confort, pas une
  * condition : son échec ne doit pas interrompre le geste.
  */

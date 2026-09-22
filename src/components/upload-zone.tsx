@@ -18,7 +18,7 @@ type Item = {
 /**
  * XMLHttpRequest et non fetch : c'est le seul moyen d'obtenir la progression
  * d'un envoi. Le fichier part en corps brut, écrit au fil de l'eau côté
- * serveur — pas de FormData, qui obligerait à tout charger en mémoire.
+ * serveur, pas de FormData, qui obligerait à tout charger en mémoire.
  */
 function upload(file: File, folderId: string | null, onProgress: (p: number) => void) {
   return new Promise<void>((resolve, reject) => {
@@ -124,7 +124,7 @@ export function UploadZone({
         }}
         data-tour="upload"
         /* `data-busy` pendant un envoi : c'est le seul état de la page dont
-           la perte serait réellement grave — une file de plusieurs gigaoctets
+           la perte serait réellement grave, une file de plusieurs gigaoctets
            et sa requête en vol. La réconciliation la préserve déjà, mais on
            ne re-rend pas la route pendant ce moment-là pour autant. */
         data-busy={busy || undefined}
@@ -137,7 +137,7 @@ export function UploadZone({
         <input
           ref={inputRef}
           type="file"
-          accept="video/*,.mp4,.mov,.m4v,.webm,.mkv"
+          accept="video/*.mp4.mov.m4v.webm.mkv"
           multiple
           hidden
           onChange={(e) => {
@@ -169,7 +169,7 @@ export function UploadZone({
             choisis des fichiers
           </button>
         </p>
-        <p className="label mt-2">MP4 · H.264 / AAC — ProRes et DNxHD à réexporter</p>
+        <p className="label mt-2">MP4 · H.264 / AAC. ProRes et DNxHD à réexporter</p>
 
         {empty && (
           <span aria-hidden className="mt-5 h-px w-40 max-w-full bg-line" />

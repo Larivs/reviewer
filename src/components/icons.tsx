@@ -56,7 +56,7 @@ export function ChevronIcon({ className }: IconProps) {
 
 /**
  * Flèche qui entre dans un dossier : « ranger ailleurs ». Le dossier est
- * coupé par le bord droit — à 14 px un dossier entier plus une flèche
+ * coupé par le bord droit, à 14 px un dossier entier plus une flèche
  * devient une tache, alors qu'un demi-dossier ouvert reste lisible.
  */
 export function MoveIcon({ className }: IconProps) {

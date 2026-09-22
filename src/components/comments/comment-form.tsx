@@ -15,7 +15,7 @@ type Props = {
   /**
    * Position exacte, lue directement dans le lecteur. C'est elle qui sert à
    * épingler : `currentTime` peut avoir jusqu'à 200 ms de retard, soit cinq
-   * images — inacceptable pour un outil au timecode.
+   * images, inacceptable pour un outil au timecode.
    */
   getPreciseTime: () => number;
   onFocusCapture: () => void;
@@ -132,7 +132,7 @@ export function CommentForm({
         {range ? (
           /* Une seule puce pour l'intervalle : deux puces séparées se
              lisaient comme deux notes, et on cherchait laquelle était le
-             début. La durée est là parce que c'est elle qu'on juge — « trois
+             début. La durée est là parce que c'est elle qu'on juge, « trois
              secondes » parle, « de 0:04 à 0:07 » demande une soustraction. */
           <span className="flex items-center gap-1.5 rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-[11px] tabular-nums tracking-[0.02em] text-accent">
             {formatTimecode(range.start, fps)}
@@ -235,7 +235,7 @@ export function CommentForm({
         </button>
 
         {/* Ancienne mécanique : épingler, aller chercher la fin à la lecture,
-            puis cliquer « définir une plage » — trois gestes dans trois coins
+            puis cliquer « définir une plage », trois gestes dans trois coins
             de l'écran, et rien à l'écran pour dire où on en était. Ici, un
             bouton arme, un glissement pose l'intervalle, et les poignées le
             corrigent. */}

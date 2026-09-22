@@ -15,7 +15,7 @@ import type { Tool } from "./annotation/annotation-layer";
  * Le lecteur publie sa position à chaque image. Répercuter ça dans l'état
  * de la page ferait rendre toute la liste de commentaires 25 à 60 fois par
  * seconde pour rien : on limite à 5 Hz. Un saut de position, lui, passe
- * immédiatement — sinon la puce du formulaire resterait en arrière après un
+ * immédiatement, sinon la puce du formulaire resterait en arrière après un
  * déplacement.
  */
 const REFRESH_MS = 200;
@@ -36,7 +36,7 @@ type Props = {
   fps: number | null;
   comments: CommentWithAuthor[];
   currentUserId: string;
-  /** Rang de couleur du compte connecté — voir `lib/user-colors`. */
+  /** Rang de couleur du compte connecté, voir `lib/user-colors`. */
   currentUserColor: number;
 };
 
@@ -102,7 +102,7 @@ export function ReviewWorkspace({
   const activeId = useMemo(() => {
     // La note qu'on vient d'écrire passe devant. Sans cette priorité, une
     // note posée à l'intérieur d'une note de plage naissait sans être mise
-    // en avant — la règle « la plage l'emporte » gagnait — et la sélection
+    // en avant, la règle « la plage l'emporte » gagnait, et la sélection
     // restait sur la note ouverte juste avant : on ne voyait pas où la
     // nouvelle était partie. Elle rend la main dès qu'on quitte son
     // intervalle, la règle normale reprend.
@@ -141,12 +141,12 @@ export function ReviewWorkspace({
   // serveur rend l'identifiant et celui où la liste arrive, la note qu'on
   // vient d'écrire **n'est pas encore dans `comments`**. Cet effet tournait
   // dans cet intervalle, ne la trouvait pas, et annulait la mise en avant
-  // avant même qu'elle serve — la sélection restait sur la note de plage,
+  // avant même qu'elle serve, la sélection restait sur la note de plage,
   // exactement le symptôme qu'on voulait corriger. Il faut donc attendre
   // qu'elle arrive plutôt que conclure à son absence.
   //
   // Cas restant : une note supprimée juste après création laisse `fresh`
-  // pointer dans le vide. C'est inerte — `activeId` exige de la trouver — et
+  // pointer dans le vide. C'est inerte, `activeId` exige de la trouver, et
   // la création suivante l'écrase.
   useEffect(() => {
     if (!fresh) return;

@@ -38,7 +38,7 @@ export function getBreadcrumb(id: string): Folder[] {
  * La portée (`scope`) filtre le résultat pour un invité. À la racine elle
  * fait davantage que filtrer : elle **remplace** le premier niveau par les
  * projets qu'on lui a ouverts. Un client n'a pas à savoir que son projet est
- * rangé au milieu de ceux des autres — chez lui, il est à la racine.
+ * rangé au milieu de ceux des autres, chez lui, il est à la racine.
  */
 export function listFolders(
   parentId: string | null,

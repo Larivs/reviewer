@@ -65,7 +65,7 @@ mkdirSync(path.join(dataDir, "videos"), { recursive: true });
 const db = new Database(path.join(dataDir, "reviewer.db"));
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
-// Le serveur tient peut-être la base au moment où on crée les comptes — c'est
+// Le serveur tient peut-être la base au moment où on crée les comptes, c'est
 // même le cas courant, on ne l'arrête pas pour ajouter un utilisateur. Sans
 // ce délai d'attente, SQLite abandonne aussitôt sur un verrou d'écriture et le
 // script échoue en pleine saisie de mot de passe.
@@ -109,7 +109,7 @@ for (const name of names) {
     updatePassword.run(await hash(await askNewPassword(name)), existing.id);
     console.log("  ✓ mot de passe mis à jour\n");
   } else {
-    console.log(`${name} — nouveau compte`);
+    console.log(`${name}, nouveau compte`);
     // Le tout premier compte de l'instance en est l'administrateur : c'est
     // lui qui creera les suivants depuis l'app. Sans cette regle, une base
     // neuve naitrait sans personne pour ouvrir un compte a qui que ce soit.
@@ -127,8 +127,8 @@ for (const name of names) {
 }
 
 // ── Ménage ────────────────────────────────────────────────────────────
-// Un compte sans mot de passe utilisable — celui créé automatiquement quand
-// l'authentification était débrayée — encombrerait la liste de connexion
+// Un compte sans mot de passe utilisable, celui créé automatiquement quand
+// l'authentification était débrayée, encombrerait la liste de connexion
 // sans jamais pouvoir servir.
 
 const inutilisables = listUsers.all().filter((u) => u.password_hash === "!");
@@ -139,8 +139,8 @@ if (inutilisables.length > 0) {
   for (const compte of inutilisables) {
     const avecNotes =
       compte.notes > 0
-        ? ` — ATTENTION : ses ${compte.notes} commentaire(s) partiront avec`
-        : " — aucun commentaire";
+        ? `, ATTENTION : ses ${compte.notes} commentaire(s) partiront avec`
+        : ", aucun commentaire";
     const reponse = await ask(`Supprimer « ${compte.name} » ?${avecNotes} (o/N) `);
     if (reponse.toLowerCase() === "o") {
       deleteUser.run(compte.id);

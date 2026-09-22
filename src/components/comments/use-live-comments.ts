@@ -10,7 +10,7 @@ import type { CommentWithAuthor } from "@/lib/comments";
  */
 const POLL_MS = 5 * 60 * 1000;
 /**
- * Plancher anti-rafale. C'est lui qui borne le pire cas, pas `POLL_MS` —
+ * Plancher anti-rafale. C'est lui qui borne le pire cas, pas `POLL_MS` -
  * l'ordonnanceur explique pourquoi, mesures comprises.
  */
 const MIN_GAP_MS = 30_000;
@@ -18,8 +18,8 @@ const MIN_GAP_MS = 30_000;
 /**
  * Garde la liste des notes à jour sans recharger la page.
  *
- * La politique de déclenchement — visibilité, rattrapage au premier plan,
- * plancher, arrêt propre — vit dans `useLivePoll`, partagée avec la grille
+ * La politique de déclenchement, visibilité, rattrapage au premier plan,
+ * plancher, arrêt propre, vit dans `useLivePoll`, partagée avec la grille
  * des projets. Ici il ne reste que le **transport**, propre à cette page :
  * on ne rapporte que du JSON et on ne re-rend jamais la route, parce qu'un
  * lecteur vidéo joue derrière.

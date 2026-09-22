@@ -17,7 +17,7 @@ resolve 'fs'` venues de SQLite. Charge au moins une page avant de soumettre.
 ## Les partis pris
 
 Le projet en a de tranchés. Ils sont expliqués dans
-[`docs/conception.md`](docs/conception.md) et dans les commentaires du code —
+[`docs/conception.md`](docs/conception.md) et dans les commentaires du code -
 c'est là qu'il faut regarder avant de proposer un changement de fond. La
 plupart des décisions qui semblent arbitraires sont la réponse à un problème
 précis, et le problème est écrit.

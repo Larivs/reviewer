@@ -1,9 +1,9 @@
 /**
  * Fond des pages de navigation : une seule nappe bleue, fixe.
  *
- * Ce qu'il y avait avant — une photo de faisceau de projection en
+ * Ce qu'il y avait avant, une photo de faisceau de projection en
  * `mix-blend-mode: screen`, un vignettage, et deux nappes chaudes qui
- * dérivaient sur des cycles de 97 et 133 secondes — racontait une salle de
+ * dérivaient sur des cycles de 97 et 133 secondes, racontait une salle de
  * projection. C'était la pièce la plus datée de l'interface, et la plus
  * chère : 40 Ko d'image et trois animations permanentes derrière une grille
  * de vignettes qu'on est en train de lire.

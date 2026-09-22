@@ -3,7 +3,7 @@ import { userColor, userInitial } from "@/lib/user-colors";
 /**
  * Pastille d'identité : l'initiale sur la teinte de la personne.
  *
- * Trois signaux redondants plutôt qu'un seul — la teinte, l'initiale, et le
+ * Trois signaux redondants plutôt qu'un seul, la teinte, l'initiale, et le
  * nom quand la place le permet. La couleur seule exclurait qui distingue mal
  * les teintes, et à trois personnes dont deux prénoms commencent par la même
  * lettre, l'initiale seule ne suffirait pas non plus.
@@ -34,7 +34,7 @@ export function UserChip({
   return (
     <span
       className={`flex items-center gap-1.5 ${shrink ? "min-w-0" : "shrink-0"}`}
-      title={`${name} — ${label}`}
+      title={`${name}, ${label}`}
     >
       <span
         aria-hidden

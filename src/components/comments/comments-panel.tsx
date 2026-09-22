@@ -188,7 +188,7 @@ export function CommentsPanel({
           {/* Sélecteur à trois états plutôt que l'ancien interrupteur
               « masquer les résolus » : celui-ci ne disait pas dans quel état
               on était sans lire son libellé, et surtout il n'offrait pas de
-              ne voir *que* les résolues — ce qu'on veut faire au moment de
+              ne voir *que* les résolues, ce qu'on veut faire au moment de
               vérifier une livraison. */}
           <div
             role="tablist"

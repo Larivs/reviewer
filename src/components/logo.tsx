@@ -1,7 +1,7 @@
 /**
  * La marque : quatre repères d'angle délimitant un cadre, et un point
- * marqué au centre. C'est littéralement ce que fait l'app — désigner un
- * point précis dans une image — et c'est le même vocabulaire que les
+ * marqué au centre. C'est littéralement ce que fait l'app, désigner un
+ * point précis dans une image, et c'est le même vocabulaire que les
  * repères de recadrage du lecteur.
  *
  * Dessinée à la main plutôt que tracée d'une image : nette à toute taille,

@@ -33,7 +33,7 @@ export type ShareResult =
 
 /**
  * Créer un lien est un geste de rangement : il appartient au studio, pas à
- * un invité — qui pourrait sinon rouvrir à d'autres ce qu'on lui a ouvert.
+ * un invité, qui pourrait sinon rouvrir à d'autres ce qu'on lui a ouvert.
  */
 export async function createShareLinkAction(
   target: ShareTarget,
@@ -59,7 +59,7 @@ export async function deleteShareLinkAction(linkId: string): Promise<ActionResul
  *
  * Son compte est un invité sans mot de passe utilisable : `"!"` comme
  * empreinte, la même convention que le compte de secours. Il ne pourra donc
- * jamais passer par l'écran de connexion — le lien est sa seule porte, et
+ * jamais passer par l'écran de connexion, le lien est sa seule porte, et
  * elle se referme avec lui.
  */
 export async function joinWithLinkAction(
@@ -110,7 +110,7 @@ export async function joinWithLinkAction(
 /**
  * Première installation : tant qu'aucun compte n'existe, n'importe qui peut
  * créer l'administrateur. La fenêtre se referme d'elle-même dès qu'il y a
- * un compte — c'est ce qui rend la page sûre sans secret à transmettre.
+ * un compte, c'est ce qui rend la page sûre sans secret à transmettre.
  */
 export async function setupAdminAction(
   name: string,

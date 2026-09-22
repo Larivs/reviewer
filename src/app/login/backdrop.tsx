@@ -11,7 +11,7 @@ const RATE = 0.9;
  * `brightness(1.05)` n'est pas un choix esthétique mais une compensation :
  * mesuré au canvas, `grayscale(0.92)` seul faisait tomber la part de l'image
  * réellement lisible de 65 % à 7 %, et sous le voile radial de la page la
- * bobine aurait disparu. À 1,05 on repasse à 80 %, teinte finale 215° —
+ * bobine aurait disparu. À 1,05 on repasse à 80 %, teinte finale 215° -
  * celle de l'accent.
  */
 const COOL =
@@ -23,26 +23,26 @@ const COOL =
  *
  * Composant client pour une seule raison : `playbackRate` n'existe pas en
  * attribut HTML, c'est une propriété qu'il faut poser sur l'élément après
- * son montage. Elle est aussi remise à chaque `loadedmetadata` — un
+ * son montage. Elle est aussi remise à chaque `loadedmetadata`, un
  * navigateur qui recharge la source (changement de réseau, reprise après
  * veille) repart à 1× sans prévenir.
  *
  * `muted` n'est pas un choix esthétique : sans lui aucun navigateur
  * n'autorise la lecture automatique. La piste audio a d'ailleurs été retirée
- * du fichier — 170 Ko qu'on ne pourra jamais entendre.
+ * du fichier, 170 Ko qu'on ne pourra jamais entendre.
  *
  * La bobine a été filmée sous une lumière chaude, et l'interface ne l'est
  * plus. Plutôt que de refaire la prise, on la vire au bleu par un filtre :
  * on la désature presque entièrement, on lui rend une trace de teinte par
  * `sepia`, on fait tourner cette teinte jusqu'au bleu, puis on la renforce.
- * L'enchaînement compte — un `hue-rotate` sur une image déjà grise ne
+ * L'enchaînement compte, un `hue-rotate` sur une image déjà grise ne
  * tournerait rien du tout. On garde ainsi la matière de la prise, la
  * poussière et le mouvement, sans la dominante orange.
  *
  * Sous `prefers-reduced-motion`, on sert l'image fixe à la place : une
  * boucle vidéo derrière un formulaire est exactement ce que ce réglage
  * demande d'éviter. C'est aussi le repli quand la vidéo ne peut pas être
- * décodée, et l'affiche pendant son chargement — l'écran n'est jamais vide.
+ * décodée, et l'affiche pendant son chargement, l'écran n'est jamais vide.
  */
 export function LoginBackdrop() {
   const videoRef = useRef<HTMLVideoElement>(null);

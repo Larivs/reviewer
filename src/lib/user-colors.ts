@@ -3,12 +3,12 @@
 /**
  * Couleur d'identité d'un utilisateur.
  *
- * C'est un **axe distinct de l'accent**. La règle de la palette — « l'accent
- * signale ce qui est actif ou attend une action, il ne décore pas » — tient
+ * C'est un **axe distinct de l'accent**. La règle de la palette, « l'accent
+ * signale ce qui est actif ou attend une action, il ne décore pas », tient
  * toujours : ces teintes ne signalent rien, elles disent *qui*.
  *
  * **Sourdes, et à valeur égale.** La première version tapait dans les teintes
- * web à pleine saturation — citron, fuchsia, corail. Chroma moyenne mesurée :
+ * web à pleine saturation, citron, fuchsia, corail. Chroma moyenne mesurée :
  * 61. Sur une interface qui vient justement de se calmer, une liste de notes
  * ressemblait à un paquet de bonbons, et la couleur d'identité criait plus
  * fort que l'accent, qui est pourtant le seul signal de l'écran. Ici la
@@ -19,11 +19,11 @@
  * moins ΔE 24 et d'au moins ΔE 33 de toute couleur du système. Aucune
  * cinquième candidate ne tient les deux : un sable ou une olive retombent à
  * ΔE 12-18 d'une voisine, une ardoise ou un bleu-gris à ΔE 3-6 du gris de
- * texte `--color-muted` — un auteur qui aurait l'air désactivé.
+ * texte `--color-muted`, un auteur qui aurait l'air désactivé.
  *
  * Au cinquième compte, les couleurs recyclent donc : deux personnes
  * partagent une teinte, et ce sont l'initiale et le prénom qui les séparent.
- * C'est le bon compromis — répéter une couleur sobre vaut mieux qu'en
+ * C'est le bon compromis, répéter une couleur sobre vaut mieux qu'en
  * inventer une qui ment sur ce qu'elle désigne.
  */
 export type UserColor = {
@@ -53,7 +53,7 @@ export function userColor(index: number | null | undefined): UserColor {
 /**
  * Initiales affichées dans la pastille. Une seule lettre : à 16 px, deux
  * lettres deviennent un pâté, et trois personnes se distinguent déjà par la
- * couleur — la lettre n'est que le filet de sécurité pour qui distingue mal
+ * couleur, la lettre n'est que le filet de sécurité pour qui distingue mal
  * les teintes.
  */
 export function userInitial(name: string) {

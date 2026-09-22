@@ -4,7 +4,7 @@ const SHORTCUTS: [string, string][] = [
   ["Maj + ← / →", "Une seconde en arrière ou en avant"],
   [", / .", "Une image (convention des logiciels de montage)"],
   ["J / L", "Une seconde en arrière ou en avant"],
-  ["0 – 9", "Aller à 0 %, 10 %… de la vidéo"],
+  ["0 - 9", "Aller à 0 %, 10 %… de la vidéo"],
   ["Début / Fin", "Aller au début ou à la fin"],
   ["M", "Couper ou rétablir le son"],
   ["R", "Lecture en boucle"],

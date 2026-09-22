@@ -3,7 +3,7 @@
 //
 // La leçon vient d'une erreur : `share-button` importait `lib/share`, marqué
 // `server-only`, et entraînait donc SQLite entier dans le paquet client.
-// `tsc` ne voit rien — c'est une contrainte du bundler, pas du typage. Même
+// `tsc` ne voit rien, c'est une contrainte du bundler, pas du typage. Même
 // remède que pour `scope.ts` : ce qui est partagé entre les deux mondes vit
 // dans un fichier qui ne dépend de rien.
 

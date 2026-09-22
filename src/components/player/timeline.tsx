@@ -87,7 +87,7 @@ type Props = {
   /**
    * Déplacement continu pendant un glissement. Distinct de `onSeek` : il
    * regroupe les demandes pour que l'image du grand lecteur suive réellement
-   * le curseur — voir `scrubTo` dans le lecteur.
+   * le curseur, voir `scrubTo` dans le lecteur.
    */
   onScrub?: (time: number) => void;
   /** Plage en cours de composition dans le formulaire de note. */
@@ -321,7 +321,7 @@ export function Timeline({
     lastScrubRef.current = null;
     if (drag && landing !== null) onSeek(landing);
 
-    // Relâché hors de la piste, aucun `pointerleave` ne suivra — le
+    // Relâché hors de la piste, aucun `pointerleave` ne suivra, le
     // pointeur était capturé. Sans ça l'aperçu restait collé à l'écran.
     const rect = event.currentTarget.getBoundingClientRect();
     const inside =
@@ -352,7 +352,7 @@ export function Timeline({
       {/* Zone de préhension. La barre visible fait 4 px : à la souris on ne
           vise pas 4 px, au doigt c'est hors de question. La zone fait 24 px
           de haut, centrée sur la barre, et ses marges négatives annulent son
-          encombrement — rien ne bouge dans la mise en page. `touch-none`
+          encombrement, rien ne bouge dans la mise en page. `touch-none`
           empêche le glissement tactile de faire défiler la page au lieu de
           déplacer la tête de lecture. */}
       <div
@@ -424,7 +424,7 @@ export function Timeline({
                 edgeRef.current = edge;
               }}
               aria-label={edge === "start" ? "Début de la plage" : "Fin de la plage"}
-              title={`${edge === "start" ? "Début" : "Fin"} — ${formatClock(
+              title={`${edge === "start" ? "Début" : "Fin"} : ${formatClock(
                 edge === "start" ? range.start : range.end,
               )}`}
               className="absolute top-1/2 h-5 w-3 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize"
@@ -437,7 +437,7 @@ export function Timeline({
             </button>
           ))}
 
-        {/* Tête de lecture : un trait fin, pas une pastille — on veut voir
+        {/* Tête de lecture : un trait fin, pas une pastille, on veut voir
             l'image précise sur laquelle on est. Elle s'allonge quand la
             piste est active, ce qui la rend attrapable sans la grossir :
             une pastille masquerait justement la position qu'elle indique. */}
@@ -478,7 +478,7 @@ export function Timeline({
                 type="button"
                 onClick={() => onSeek(marker.time)}
                 title={marker.label}
-                aria-label={`Aller à la note ${marker.index ?? ""} — de ${formatClock(marker.time)} à ${formatClock(marker.end!)}`}
+                aria-label={`Aller à la note ${marker.index ?? ""}, de ${formatClock(marker.time)} à ${formatClock(marker.end!)}`}
                 className={`pointer-events-auto absolute min-w-[5px] transition-all hover:!opacity-100 ${
                   marker.id === activeMarkerId ? "-mt-px h-[9px]" : "h-[7px]"
                 }`}
@@ -491,7 +491,7 @@ export function Timeline({
               >
                 {/* Zone de clic élargie, invisible : le repère ne fait que
                     quelques pixels, on ne vise pas ça à la souris. Elle
-                    déborde surtout horizontalement — verticalement les
+                    déborde surtout horizontalement, verticalement les
                     rangées ne sont espacées que de 8 px. */}
                 <span aria-hidden className="absolute -inset-x-1 -inset-y-1" />
                 {/* Crochet entrée/sortie : montants pleins aux deux bouts,
@@ -526,7 +526,7 @@ export function Timeline({
               type="button"
               onClick={() => onSeek(marker.time)}
               title={marker.label}
-              aria-label={`Aller à la note ${marker.index ?? ""} — ${formatClock(marker.time)}`}
+              aria-label={`Aller à la note ${marker.index ?? ""}, ${formatClock(marker.time)}`}
               className="pointer-events-auto absolute -translate-x-1/2 leading-none hover:!opacity-100"
               style={{
                 top: lane * LANE_HEIGHT + 1,

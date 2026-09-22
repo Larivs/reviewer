@@ -35,7 +35,7 @@ export { scopeAllowsFolder, scopeAllowsVideo, type Scope };
 export type Viewer = CurrentUser & { role: UserRole };
 
 /**
- * `cache` : plusieurs composants d'un même rendu demandent le spectateur —
+ * `cache` : plusieurs composants d'un même rendu demandent le spectateur -
  * la page, l'en-tête, la grille. Sans ça on relirait la session et la table
  * des comptes à chaque appel.
  */
@@ -54,7 +54,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!row) return null;
 
   // Le compte est né d'un lien de partage : son accès ne vaut que tant que le
-  // lien vit. Sans ce contrôle, l'expiration serait décorative — le cookie de
+  // lien vit. Sans ce contrôle, l'expiration serait décorative, le cookie de
   // session dure trente jours et survivrait largement au lien.
   if (row.invitedVia && !linkIsLive(row.invitedVia)) return null;
 
@@ -75,7 +75,7 @@ function linkIsLive(linkId: string) {
 /**
  * Un invité dont le lien est mort n'est pas « déconnecté » au sens habituel :
  * l'envoyer vers l'écran de connexion lui présenterait un formulaire qu'il ne
- * peut pas remplir — il n'a jamais eu de mot de passe. On le renvoie vers une
+ * peut pas remplir, il n'a jamais eu de mot de passe. On le renvoie vers une
  * page qui le lui dit.
  */
 async function expiredGuest() {
@@ -102,8 +102,8 @@ export const isGuest = (v: Viewer) => v.role === "invite";
 
 /**
  * Portée d'un spectateur. Pour un invité, on part de ses projets et on
- * descend : la table des dossiers tient en mémoire — quelques dizaines de
- * lignes — donc on la lit une fois et on parcourt, plutôt que d'enchaîner une
+ * descend : la table des dossiers tient en mémoire, quelques dizaines de
+ * lignes, donc on la lit une fois et on parcourt, plutôt que d'enchaîner une
  * requête récursive par vérification.
  *
  * La profondeur est bornée : un cycle parent/enfant en base ferait tourner
@@ -177,7 +177,7 @@ export async function requireFolderView(folderId: string) {
   return { viewer, scope };
 }
 
-/** La vidéo demandée, ou `notFound()` — même raisonnement que ci-dessus. */
+/** La vidéo demandée, ou `notFound()`, même raisonnement que ci-dessus. */
 export async function requireVideoView(
   videoId: string,
 ): Promise<{ viewer: Viewer; scope: Scope; video: Video }> {

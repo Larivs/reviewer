@@ -21,7 +21,7 @@ type Props = {
   /**
    * Teinte des tracés : celle de l'auteur de l'annotation affichée, ou la
    * sienne pendant qu'on dessine. Deux flèches sur la même image ne disent
-   * pas la même chose selon qui les a posées — la couleur le dit sans
+   * pas la même chose selon qui les a posées, la couleur le dit sans
    * qu'on ait à ouvrir la note.
    */
   color?: string;

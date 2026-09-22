@@ -69,7 +69,7 @@ export async function deleteVideoAction(id: string): Promise<ActionResult> {
 
 /**
  * Le statut est un signal d'équipe : tout le monde le change, invités
- * compris — c'est souvent le client qui dit « validé ». Mais seulement sur
+ * compris, c'est souvent le client qui dit « validé ». Mais seulement sur
  * une vidéo qu'il a le droit de voir.
  */
 export async function setVideoStatusAction(

@@ -39,7 +39,7 @@ async function resolve(id: string): Promise<Resolved | null> {
  * Lit un fichier (ou une tranche) dans un `ReadableStream` web.
  *
  * On n'utilise pas `Readable.toWeb` : quand le navigateur abandonne une requête
- * Range en cours — ce qu'il fait à chaque déplacement de la tête de lecture —
+ * Range en cours, ce qu'il fait à chaque déplacement de la tête de lecture -
  * son adaptateur écrit dans un contrôleur déjà fermé et lève une
  * `uncaughtException` (`ERR_INVALID_STATE`) qui peut faire tomber le process.
  * Ici tout passe par le drapeau `done` : une fois posé, plus rien ne touche au
@@ -154,7 +154,7 @@ export async function GET(
   const { id } = await params;
 
   // Le contrôle le plus important de l'app : c'est ici qu'on sert le fichier
-  // lui-même. Une session valide ne suffit pas — il faut que la vidéo soit
+  // lui-même. Une session valide ne suffit pas, il faut que la vidéo soit
   // dans la portée du compte.
   const access = await readVideoOr404(id);
   if (access instanceof Response) return access;

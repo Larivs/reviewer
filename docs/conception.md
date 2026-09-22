@@ -37,7 +37,7 @@ data/             base, vidéos, vignettes (hors git)
 Deux fichiers portent une contrainte particulière : `scope.ts` et
 `share-types.ts` n'importent **rien**. Ils contiennent ce qui est partagé
 entre le serveur et le navigateur, et c'est cette absence de dépendance qui
-évite deux pièges — un cycle d'imports entre la couche d'accès et les lectures
+évite deux pièges, un cycle d'imports entre la couche d'accès et les lectures
 de données, et l'entraînement de SQLite dans le paquet client par un composant
 qui n'aurait importé qu'un type.
 
@@ -57,17 +57,17 @@ retirés du disque en même temps que les lignes en base.
 exposer le serveur hors de la machine dans cet état. `npm run serve` refuse de
 démarrer dans cette configuration.
 
-Mots de passe hachés en argon2id. Sessions en base, cookie `httpOnly` — le
+Mots de passe hachés en argon2id. Sessions en base, cookie `httpOnly`, le
 token n'est jamais lisible en JavaScript, et la base n'en garde que
 l'empreinte SHA-256 : une fuite du fichier ne permet pas d'usurper une
 session. Le cookie passe en `secure` dès que la requête arrive en HTTPS,
-détecté sur `x-forwarded-proto`. En HTTP local rien ne change — un cookie
+détecté sur `x-forwarded-proto`. En HTTP local rien ne change, un cookie
 `secure` y serait ignoré et plus personne ne pourrait se connecter.
 
 **Une session valide ne suffit pas.** Toute lecture passe par
 `lib/access.ts`, qui répond à une seule question : ce compte a-t-il le droit
 de voir *cette* vidéo ? Les routes ne lisent plus la base directement. C'est
-un choix de forme autant que de fond — une règle d'accès dispersée dans vingt
+un choix de forme autant que de fond, une règle d'accès dispersée dans vingt
 fichiers est une règle qu'on oublie d'appliquer au vingt-et-unième.
 
 Les vidéos ne sont pas servies en statique : elles passent par une route qui
@@ -88,7 +88,7 @@ lien.
 L'envoi se fait en corps de requête brut, écrit sur le disque au fil de l'eau :
 un fichier de plusieurs gigaoctets ne passe jamais entièrement en mémoire.
 Plafond à 25 Go, vérifié en comptant les octets reçus et pas seulement d'après
-l'en-tête `Content-Length`. Les fichiers partent un par un — deux envois
+l'en-tête `Content-Length`. Les fichiers partent un par un, deux envois
 simultanés se partagent la même bande passante et finissent tous les deux plus
 tard.
 
@@ -112,7 +112,7 @@ permet pas d'avancer image par image.
 - Vitesse de 0,25× à 2×, volume mémorisé par navigateur.
 
 Raccourcis : Espace/K lecture-pause, flèches une image, Maj+flèches une
-seconde, `,`/`.` une image (convention Premiere), J/L une seconde, 0–9 pour
+seconde, `,`/`.` une image (convention Premiere), J/L une seconde, 0-9 pour
 aller à un pourcentage, Début/Fin, M le son, F le plein écran, R la boucle,
 Ctrl+molette le zoom. La liste est dépliable sous le lecteur.
 
@@ -120,10 +120,10 @@ Ctrl+molette le zoom. La liste est dépliable sous le lecteur.
 
 L'image est bornée par la **place réellement restante**, pas par une fraction
 de la fenêtre. Avec un plafond en `vh`, l'en-tête, le fil d'Ariane, la piste
-et la rangée de transport s'ajoutaient par-dessus : sur un 13–14 pouces la
+et la rangée de transport s'ajoutaient par-dessus : sur un 13-14 pouces la
 barre de contrôle passait sous le bord bas et il fallait défiler pour
 atteindre l'avance image par image. La liste des raccourcis, elle, a le droit
-de tomber sous le bord — on ne la consulte pas en regardant un plan.
+de tomber sous le bord, on ne la consulte pas en regardant un plan.
 
 La rangée de transport se replie sur deux lignes quand sa colonne descend
 sous 660 px, via une **requête de conteneur** et non un point de rupture sur
@@ -138,7 +138,7 @@ recadre ensuite en glissant. Le déplacement est borné pour qu'aucun bord ne
 découvre du vide, et revenir à 100 % recentre.
 
 La vidéo **et le calque d'annotation sont transformés ensemble** : sans ça,
-les dessins se décrocheraient de l'image dès qu'on agrandit. Vérifié — un
+les dessins se décrocheraient de l'image dès qu'on agrandit. Vérifié, un
 point posé à 0,5/0,5 reste à 0,5/0,5 à 200 %, et on peut dessiner en étant
 zoomé.
 
@@ -157,7 +157,7 @@ chaque espace.
 
 Le timecode suit l'image réellement présentée (`requestVideoFrameCallback`)
 et non l'événement `timeupdate`, qui ne se déclenche que quatre fois par
-seconde — il sauterait de six images en six images. Repli automatique sur
+seconde, il sauterait de six images en six images. Repli automatique sur
 Firefox, qui n'expose pas cette API.
 
 Quand ffprobe n'a pas pu déterminer la cadence, l'affichage passe en
@@ -167,16 +167,16 @@ déplacement image par image se rabat sur 25 fps.
 ## Commentaires au timecode
 
 Chaque note est attachée à un instant précis de la vidéo. **Un clic n'importe
-où sur la note** y ramène à l'image exacte — la pastille de timecode seule ne
+où sur la note** y ramène à l'image exacte, la pastille de timecode seule ne
 couvrait que 6 % de la carte, il fallait viser. Cliquer un bouton ne navigue
 pas, et sélectionner du texte non plus : on peut toujours copier une note.
 Chaque note apparaît aussi en repère sur la piste de
-lecture — vert quand elle est résolue. Ces repères ne mesurent que 8 × 7 px :
+lecture, vert quand elle est résolue. Ces repères ne mesurent que 8 × 7 px :
 leur zone de clic est élargie en dehors du dessin, sinon on ne les vise pas.
 
 **Comment le timecode est capturé.** Se placer dans le champ met la vidéo en
 pause : on annote une image, pas un flux qui défile. La puce de timecode suit
-la lecture jusqu'à la première frappe, puis se **fige** — le temps d'écrire,
+la lecture jusqu'à la première frappe, puis se **fige**, le temps d'écrire,
 la vidéo aurait avancé, et c'est bien l'image qu'on regardait qu'on veut
 référencer. Si on se déplace ensuite, la puce affiche `≠ lecture · recaler`
 pour signaler qu'elle ne correspond plus à l'écran.
@@ -192,7 +192,7 @@ peut marquer une note comme résolue** : c'est souvent le monteur qui l'applique
 pas celui qui l'a écrite. Ces règles sont appliquées côté serveur, pas
 seulement en masquant des boutons.
 
-Les notes sont triées par timecode — l'ordre dans lequel on reprend ses notes,
+Les notes sont triées par timecode, l'ordre dans lequel on reprend ses notes,
 pas celui où elles ont été écrites. Elles sont **numérotées** dans cet ordre,
 pour qu'on puisse dire « la note 3 » au téléphone. Entrée insère un retour à
 la ligne (une note est souvent une petite liste), Ctrl + Entrée envoie.
@@ -206,14 +206,14 @@ triangle.
 
 Les repères sont **répartis en rangées** sous la piste, comme un planning :
 chacun va dans la première rangée libre à sa position. Sans ça, une note
-ponctuelle posée à l'intérieur d'une plage disparaissait sous la barre — on ne
+ponctuelle posée à l'intérieur d'une plage disparaissait sous la barre, on ne
 voyait qu'un seul problème là où il y en avait deux. Trois rangées au
 maximum, et la zone ne grandit que si elle en a besoin.
 
 Les deux types se distinguent par la **forme**, pas par la couleur : la
 palette n'a qu'un accent et en ajouter un affaiblirait la règle « accent =
 demande attention ». Une note ponctuelle est un triangle plein, une plage un
-crochet entrée/sortie — montants aux deux bouts, trait mince entre les deux,
+crochet entrée/sortie, montants aux deux bouts, trait mince entre les deux,
 la notation du montage. Le repère de la note sous la tête de lecture est mis
 en avant, ce qui relie la piste au panneau latéral. Une plage reste active sur tout son intervalle, une note ponctuelle
 seulement dans une fenêtre d'une demi-seconde.
@@ -221,7 +221,7 @@ seulement dans une fenêtre d'une demi-seconde.
 ### Annotations sur l'image
 
 Quatre outils : point, flèche, cadre, tracé libre. Activer le dessin met la
-vidéo en pause et épingle le timecode — on annote une image donnée.
+vidéo en pause et épingle le timecode, on annote une image donnée.
 
 **Les coordonnées sont normalisées entre 0 et 1**, jamais en pixels : une
 annotation posée en plein écran se retrouve au même endroit sur une fenêtre

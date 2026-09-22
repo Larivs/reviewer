@@ -67,7 +67,7 @@ export function FolderCard({ folder }: { folder: FolderListItem }) {
       /* `data-busy` : contrat lu par `live-grid`. Tant que cet attribut est
          présent quelque part dans la page, le sondage reporte son tour et ne
          re-rend pas la route. **Tout nouveau panneau de ce genre doit le
-         porter** — sinon il se fera rafraîchir sous les doigts. */
+         porter**, sinon il se fera rafraîchir sous les doigts. */
       <form
         data-busy
         onSubmit={submitRename}
@@ -146,9 +146,8 @@ export function FolderCard({ folder }: { folder: FolderListItem }) {
 
   return (
     <div className="group relative overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong hover:bg-surface-2">
-      {/* Filet de flanc : il tient le même rôle que l'ancien bord perforé
-          — empêcher que le grand vide à droite du nom devienne le sujet de
-          la carte — sans la référence à la boîte de bobine. Il s'allume à
+      {/* Filet de flanc : il tient le même rôle que l'ancien bord perforé, empêcher que le grand vide à droite du nom devienne le sujet de
+          la carte, sans la référence à la boîte de bobine. Il s'allume à
           l'accent au survol, ce qui donne à la carte son seul mouvement. */}
       <span
         aria-hidden

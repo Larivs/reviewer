@@ -11,7 +11,7 @@ export const AUTH_DISABLED = process.env.AUTH_DISABLED === "1";
 
 if (AUTH_DISABLED) {
   console.warn(
-    "\n  ⚠  AUTH_DISABLED=1 — l'authentification est désactivée.\n" +
+    "\n  ⚠  AUTH_DISABLED=1, l'authentification est désactivée.\n" +
       "     N'expose pas ce serveur au réseau dans cet état.\n" +
       "     Repasse à 0 dans .env.local pour la réactiver.\n",
   );

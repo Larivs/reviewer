@@ -20,7 +20,7 @@ d'abord de l'endroit où tu le poses. Le code part des hypothèses suivantes :
 
 - Mots de passe hachés en **argon2id**.
 - Sessions en base, cookie `httpOnly` ; la base ne garde que l'empreinte
-  SHA-256 du jeton — une fuite du fichier ne permet pas d'usurper une session.
+  SHA-256 du jeton, une fuite du fichier ne permet pas d'usurper une session.
 - Cookie `secure` automatique dès que la requête arrive en HTTPS.
 - **Un point de contrôle unique** (`src/lib/access.ts`) pour toute lecture :
   pages, flux vidéo, vignettes, planches d'aperçu, notes. Aucune route ne lit
@@ -29,7 +29,7 @@ d'abord de l'endroit où tu le poses. Le code part des hypothèses suivantes :
   l'existence de ce qu'on ne doit pas voir.
 - Limitation des tentatives de connexion.
 - Envois écrits au fil de l'eau, plafonnés, avec vérification du contenu par
-  ffprobe — pas seulement de l'extension.
+  ffprobe, pas seulement de l'extension.
 
 ## Ce qui n'est pas en place
 

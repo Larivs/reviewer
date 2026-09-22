@@ -9,7 +9,7 @@
  *
  * La base est en mode WAL. Des transactions validées vivent dans le fichier
  * `-wal` et ne sont recopiées dans le `.db` qu'au prochain point de contrôle.
- * Copier `reviewer.db` seul perd donc les notes les plus récentes —
+ * Copier `reviewer.db` seul perd donc les notes les plus récentes -
  * silencieusement, ce qui est le pire cas : on croit avoir une sauvegarde. Et
  * copier les trois fichiers en pleine écriture peut donner un instantané
  * déchiré, incohérent au rechargement.
@@ -19,12 +19,12 @@
  * sauvegarde qu'on n'a jamais vérifiée n'est pas une sauvegarde.
  *
  * DISPOSITION. Un premier jet créait un dossier horodaté complet à chaque
- * exécution — ce qui rendait la copie incrémentale inutile, la destination
+ * exécution, ce qui rendait la copie incrémentale inutile, la destination
  * étant toujours vide. Avec une bibliothèque de plusieurs dizaines de
  * gigaoctets, chaque sauvegarde aurait tout dupliqué, et on aurait cessé de
  * la lancer. La disposition suit donc la nature des données : les média
- * s'accumulent sans jamais changer — ils sont nommés d'après un uuid et ne
- * sont jamais réécrits — tandis que la base change sans arrêt mais tient
+ * s'accumulent sans jamais changer, ils sont nommés d'après un uuid et ne
+ * sont jamais réécrits, tandis que la base change sans arrêt mais tient
  * dans quelques mégaoctets.
  *
  *     reviewer-backups/
@@ -47,7 +47,7 @@ const MEDIA = ["videos", "thumbs", "sprites"];
 
 const NL = "\n";
 
-/** `2026-09-09_2232` — triable, lisible, et valide comme nom de fichier. */
+/** `2026-09-09_2232`, triable, lisible, et valide comme nom de fichier. */
 function stamp() {
   const d = new Date();
   const p = (n) => String(n).padStart(2, "0");
@@ -96,7 +96,7 @@ async function backupDatabase(destination) {
   // Ouverte en écriture pour une raison : `backup()` conserve le mode WAL de
   // la source, donc la copie s'accompagne aussitôt d'un `-wal` et d'un
   // `-shm`. On la repasse en journal `delete`, ce qui fait de l'instantané un
-  // **fichier unique et autonome** — la restauration devient un simple
+  // **fichier unique et autonome**, la restauration devient un simple
   // renommage, et un dossier de sauvegardes qui laisse traîner des annexes
   // « .partiel-wal » donne l'impression que quelque chose a échoué.
   const copy = new Database(temporary);
@@ -131,7 +131,7 @@ async function backupDatabase(destination) {
 
 /**
  * Ce que le miroir a rencontré sur le disque, par dossier. Sert au contrôle
- * de cohérence base/disque de la fin — c'est le seul endroit du projet où on
+ * de cohérence base/disque de la fin, c'est le seul endroit du projet où on
  * regarde les deux ensemble.
  */
 const seen = {};
@@ -200,7 +200,7 @@ async function main() {
     path.join(snapshots, `reviewer_${stamp()}.db`),
   );
   console.log(
-    `  base       ✓ vérifiée — ${counts.comptes} comptes, ${counts.dossiers} dossiers, ` +
+    `  base       ✓ vérifiée, ${counts.comptes} comptes, ${counts.dossiers} dossiers, ` +
       `${counts.videos} vidéos, ${counts.notes} notes`,
   );
 

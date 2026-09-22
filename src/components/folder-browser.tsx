@@ -133,7 +133,7 @@ export function FolderBrowser({
 
       {/* Dernier enfant, sans clé et sans enveloppe : les sections
           conditionnelles occupent leur emplacement même quand elles valent
-          `false`, donc la zone d'envoi garde son numéro d'emplacement — et
+          `false`, donc la zone d'envoi garde son numéro d'emplacement, et
           avec lui sa fibre, sa file d'envoi et sa requête en vol. Enrober ou
           re-clé cet arbre casserait un envoi en cours. */}
       <LiveGrid />

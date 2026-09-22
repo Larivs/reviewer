@@ -12,7 +12,7 @@ import { TrashIcon } from "./icons";
  * Fermer un lien ne supprime pas les comptes qu'il a créés ni leurs notes :
  * effacer la review d'un client parce qu'on révoque un accès serait une
  * perte de travail, pas une mesure de sécurité. Les personnes entrées par ce
- * lien perdent leurs droits et leur session — ce qu'elles ont écrit reste.
+ * lien perdent leurs droits et leur session, ce qu'elles ont écrit reste.
  */
 export function ShareLinksPanel({ links }: { links: LinkRow[] }) {
   return (
@@ -59,7 +59,7 @@ function LinkRowItem({ link }: { link: LinkRow }) {
         <span className="min-w-0 truncate text-sm font-medium text-fg">
           {/* La cible a pu être supprimée depuis : le lien ne mène alors plus
               nulle part, autant le dire plutôt que d'afficher un vide. */}
-          {link.target ?? "— supprimé —"}
+          {link.target ?? "(supprimé)"}
         </span>
 
         {expired ? (

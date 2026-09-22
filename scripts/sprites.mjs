@@ -24,7 +24,7 @@ for (const video of videos) {
   }
   const source = path.join(dataDir, "videos", video.filename);
   if (!existsSync(source) || !video.duration) {
-    console.log(`  ⚠ ${video.name} — fichier ou durée manquants`);
+    console.log(`  ⚠ ${video.name}, fichier ou durée manquants`);
     continue;
   }
 

@@ -6,7 +6,7 @@ import { joinWithLinkAction } from "@/actions/share";
 /**
  * La seule chose qu'on demande au client : son prénom.
  *
- * Pas pour l'identifier — le lien s'en charge — mais pour signer ses notes.
+ * Pas pour l'identifier, le lien s'en charge, mais pour signer ses notes.
  * Une review à trois voix dont les notes n'ont pas d'auteur devient
  * illisible dès la deuxième contradiction.
  */

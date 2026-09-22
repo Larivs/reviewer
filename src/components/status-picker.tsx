@@ -11,13 +11,13 @@ import { STATUS_CLASSES, STATUS_LABELS } from "@/lib/format";
  *
  * La valeur affichée est **dérivée** de la prop, pas copiée dedans. C'était
  * un `useState(status)` : lu une seule fois au montage, et comme la carte
- * n'est jamais remontée — sa clé est l'id de la vidéo — un statut changé
+ * n'est jamais remontée, sa clé est l'id de la vidéo, un statut changé
  * depuis un autre poste n'apparaissait **jamais** sur une page restée
  * ouverte. Le sondage de la grille rendait ce défaut visible.
  *
  * `useOptimistic` supprime la classe de bug plutôt que de la rattraper :
  * hors action en vol, la valeur *est* la prop, donc la resynchronisation est
- * structurelle. Et le retour en arrière sur échec est gratuit — l'optimiste
+ * structurelle. Et le retour en arrière sur échec est gratuit, l'optimiste
  * est simplement abandonné, on retombe sur la prop inchangée.
  */
 export function StatusPicker({

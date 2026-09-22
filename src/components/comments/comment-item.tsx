@@ -84,7 +84,7 @@ export function CommentItem({
 
   /**
    * Toute la note ramène à son timecode. La pastille seule ne couvrait que
-   * 6 % de la carte — une cible de 87 × 21 px dans un bloc de 324 × 94 —, il
+   * 6 % de la carte (une cible de 87 × 21 px dans un bloc de 324 × 94), il
    * fallait viser. Deux garde-fous : on ne déclenche pas depuis un contrôle,
    * ni quand du texte vient d'être sélectionné, sinon copier une note
    * déplacerait la tête de lecture.
@@ -118,8 +118,8 @@ export function CommentItem({
       {/* Liseré d'auteur sur le bord gauche. C'est le repère qu'on balaie
           quand on cherche « les notes de Jérôme » dans une liste de vingt :
           la pastille de l'en-tête arrive trop tard, elle demande de lire.
-          Il s'épaissit quand la note est sous la tête de lecture — même
-          objet, deux intensités, plutôt qu'un second liseré ambre qui
+          Il s'épaissit quand la note est sous la tête de lecture, même
+          objet, deux intensités, plutôt qu'un second liseré d'accent qui
           entrerait en concurrence avec lui. */}
       <span
         aria-hidden
@@ -128,13 +128,13 @@ export function CommentItem({
       />
 
       {/* Première ligne : *quoi* et *qui*. Elle peut passer sur deux rangs
-          quand la note couvre une plage — deux timecodes et leur durée ne
+          quand la note couvre une plage, deux timecodes et leur durée ne
           tiennent pas sur 300 px à côté d'un nom. Mieux vaut un retour à la
           ligne qu'un nom rogné : « H… » ne désigne personne. */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {/* Le rang était en `line-strong` sur `surface-2` : deux valeurs
             presque identiques, donc un numéro invisible. C'est pourtant lui
-            qui sert à citer la note à l'oral — il devient une pastille. */}
+            qui sert à citer la note à l'oral, il devient une pastille. */}
         <span
           className={`shrink-0 rounded-sm px-1 py-px font-mono text-[10px] tabular-nums ${
             active ? "bg-accent/20 text-accent" : "bg-surface-3 text-fg-dim"
@@ -230,7 +230,7 @@ export function CommentItem({
       ) : (
         /* 14 px et une interligne large : c'est le seul texte de la carte
            qu'on lit vraiment, tout le reste est de la signalétique. Une note
-           résolue passe en `fg-dim` plutôt que sous une opacité globale — à
+           résolue passe en `fg-dim` plutôt que sous une opacité globale, à
            55 % d'opacité on ne pouvait plus la relire, alors que c'est
            justement ce qu'on fait pour vérifier qu'elle est bien appliquée. */
         <p
@@ -246,7 +246,7 @@ export function CommentItem({
           Répondre sous la note d'un autre, au lieu d'en écrire une seconde
           au même timecode : la piste garde un repère par problème, et la
           discussion reste attachée à ce qu'elle discute. Les réponses sont
-          en retrait derrière un filet — on voit d'un coup d'œil où finit la
+          en retrait derrière un filet, on voit d'un coup d'œil où finit la
           note et où commence ce qu'on en a dit. */}
       {comment.replies.length > 0 && !editing && (
         <ul className="mt-2 space-y-2 border-l border-line pl-2.5">
@@ -382,7 +382,7 @@ export function CommentItem({
                 run(() => toggleCommentResolvedAction(comment.id, !comment.resolved))
               }
               /* `-my-1 py-1` : la cible passe de 15 à 23 px de haut sans
-                 rien déplacer — le libellé est trop fin pour être visé
+                 rien déplacer, le libellé est trop fin pour être visé
                  confortablement à sa hauteur de texte. */
               className="card-action -my-1 shrink-0 py-1 disabled:opacity-45"
             >

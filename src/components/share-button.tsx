@@ -7,7 +7,7 @@ import { LINK_DURATIONS, type LinkDuration, type ShareTarget } from "@/lib/share
 /**
  * « Partager » : la façon dont un client entre dans la review.
  *
- * Le geste tient en trois clics — ouvrir, choisir une durée, copier — parce
+ * Le geste tient en trois clics, ouvrir, choisir une durée, copier, parce
  * que c'est le geste qu'on fait vingt fois par semaine. Le lien apparaît en
  * clair et reste sélectionnable : un bouton « copier » qui échoue en
  * silence, sur une page non sécurisée, laisserait l'utilisateur croire qu'il
@@ -33,7 +33,7 @@ export function ShareButton({
       const result = await createShareLinkAction(target, duration);
       if (result.ok) {
         // L'origine vient du navigateur : c'est la seule façon d'obtenir
-        // l'adresse par laquelle on accède réellement au serveur — nom de
+        // l'adresse par laquelle on accède réellement au serveur, nom de
         // machine sur le réseau local, adresse Tailscale ou nom de domaine.
         setLink(`${window.location.origin}/r/${result.token}`);
         setError(null);

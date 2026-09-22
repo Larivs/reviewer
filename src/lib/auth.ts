@@ -33,13 +33,13 @@ function fingerprint(token: string) {
  * Le cookie était posé avec `secure: false` en dur, au motif que l'app
  * tournait en HTTP sur un réseau local ou via Tailscale. C'était vrai tant
  * que personne ne l'hébergeait ailleurs. Dès qu'une instance est publiée
- * derrière un nom de domaine — ce que fait quiconque envoie des liens de
- * review à ses clients — le jeton de session repartirait en clair.
+ * derrière un nom de domaine, ce que fait quiconque envoie des liens de
+ * review à ses clients, le jeton de session repartirait en clair.
  *
  * On détecte plutôt que de demander un réglage : `x-forwarded-proto` est ce
  * que pose tout proxy sérieux, et il peut en contenir plusieurs séparés par
  * des virgules, d'où le premier segment seulement. En HTTP local, rien ne
- * change — un cookie `secure` y serait tout simplement ignoré, et plus
+ * change, un cookie `secure` y serait tout simplement ignoré, et plus
  * personne ne pourrait se connecter.
  */
 async function requestIsSecure() {
@@ -159,7 +159,7 @@ export async function setUserPassword(userId: string, password: string) {
 }
 
 /**
- * Supprime le compte. Ses notes partent avec, par cascade — c'est pour ça
+ * Supprime le compte. Ses notes partent avec, par cascade, c'est pour ça
  * que l'interface annonce leur nombre avant de demander confirmation. Les
  * sessions ouvertes tombent aussi, donc la personne est déconnectée sur le
  * champ plutôt qu'à l'expiration de son cookie.
@@ -177,7 +177,7 @@ export function deleteUser(userId: string) {
  *
  * L'alphabet écarte ce qui se lit mal quand on dicte ou qu'on recopie :
  * 0/O, 1/l/I, 5/S, 8/B. Cinq groupes de quatre plutôt qu'une chaîne
- * continue — un mot de passe qu'on doit lire à voix haute se découpe.
+ * continue, un mot de passe qu'on doit lire à voix haute se découpe.
  */
 export function generatePassword() {
   const alphabet = "ACDEFGHJKMNPQRTUVWXYZ234679";

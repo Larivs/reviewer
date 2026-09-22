@@ -13,7 +13,7 @@ export type PictureRect = {
  * Rectangle réellement occupé par l'image dans l'élément vidéo. Un
  * `<video>` centre son image et laisse des bandes noires dès que le cadre
  * de l'élément n'a pas le même rapport. Tout ce qui se superpose à l'image
- * — annotations, repères de recadrage — doit se caler sur ce rectangle et
+ *, annotations, repères de recadrage, doit se caler sur ce rectangle et
  * non sur la boîte de l'élément, sinon ça atterrit dans les bandes.
  */
 export function usePictureRect(videoRef: React.RefObject<HTMLVideoElement | null>) {

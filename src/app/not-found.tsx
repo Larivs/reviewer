@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 
 /**
- * Page atteinte quand un dossier ou une vidéo n'existe plus — un lien
+ * Page atteinte quand un dossier ou une vidéo n'existe plus, un lien
  * partagé après une suppression, typiquement. Jusqu'ici c'était l'écran
  * brut de Next, sans retour vers l'app.
  */

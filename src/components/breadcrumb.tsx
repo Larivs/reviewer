@@ -6,7 +6,7 @@ import type { Folder } from "@/lib/folders";
  * Le nom du dossier lui-même n'est plus ici : il est repris juste en
  * dessous comme titre de page, en capitales lourdes. Tant que les deux
  * étaient sur la même ligne et à la même taille, la page n'avait pas de
- * sommet — on lisait un fil, pas un titre.
+ * sommet, on lisait un fil, pas un titre.
  */
 export function Breadcrumb({ trail }: { trail: Folder[] }) {
   const ancestors = trail.slice(0, -1);
