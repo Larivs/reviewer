@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notifyFolderChanged } from "@/lib/live";
 import { FORBIDDEN, requireStaff } from "@/lib/access";
 import {
   countDescendants,
@@ -18,6 +19,8 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 /** Une seule invalidation large : l'arbre est partout dans l'interface. */
 function refresh() {
   revalidatePath("/", "layout");
+  // Les autres postes voient le changement sans attendre leur prochain tour.
+  notifyFolderChanged();
 }
 
 function validateName(raw: string): { name: string } | { error: string } {

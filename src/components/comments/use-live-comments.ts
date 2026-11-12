@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLivePoll } from "../use-live-poll";
+import { useLiveEvents } from "../use-live-events";
 import type { CommentWithAuthor } from "@/lib/comments";
 
 /**
@@ -33,6 +34,9 @@ const MIN_GAP_MS = 30_000;
  *   sondage : elle écrase l'état local, ce qui garde l'écriture d'une note
  *   instantanée.
  */
+/** Quelqu'un qui a la vidéo ouverte en ce moment. */
+export type Viewer = { id: string; name: string; color: number };
+
 export function useLiveComments(
   videoId: string,
   fromServer: CommentWithAuthor[],
@@ -71,9 +75,19 @@ export function useLiveComments(
 
   useLivePoll(tick, { pollMs: POLL_MS, minGapMs: MIN_GAP_MS });
 
+  // Le direct. Le serveur dit seulement « les notes ont changé », on relit
+  // par la route habituelle, qui vérifie les droits. Le sondage ci-dessus
+  // reste le filet : derrière un proxy qui retient les flux, il fait encore
+  // le travail au retour au premier plan.
+  const [viewers, setViewers] = useState<Viewer[]>([]);
+  useLiveEvents(`/api/events?video=${videoId}`, {
+    comments: () => void tick().catch(() => {}),
+    presence: (data) => setViewers(Array.isArray(data) ? (data as Viewer[]) : []),
+  });
+
   // La requête en vol est abandonnée au démontage : sans ça, quitter la page
   // laisserait une réponse arriver dans un composant démonté.
   useEffect(() => () => inFlight.current?.abort(), []);
 
-  return live;
+  return { comments: live, viewers };
 }

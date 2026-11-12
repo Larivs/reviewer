@@ -4,6 +4,7 @@ import { useOptimistic, useTransition } from "react";
 import { setVideoStatusAction } from "@/actions/videos";
 import { VIDEO_STATUSES, type VideoStatus } from "@/db/schema";
 import { STATUS_CLASSES, STATUS_LABELS } from "@/lib/format";
+import { toast } from "./toast";
 
 /**
  * Un `select` natif habillé en badge : il garde le clavier, le tactile et
@@ -38,7 +39,10 @@ export function StatusPicker({
     // seul si le serveur refuse.
     startTransition(async () => {
       showOptimistic(next);
-      await setVideoStatusAction(videoId, next);
+      // Refus du serveur : le badge retombe tout seul sur l'ancien statut,
+      // mais sans un mot on croirait à un clic raté.
+      const result = await setVideoStatusAction(videoId, next);
+      if (!result.ok) toast(result.error, "error");
     });
   }
 

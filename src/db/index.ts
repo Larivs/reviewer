@@ -52,6 +52,16 @@ function connect() {
   ensureColumn(sqlite, "users", "role", "TEXT NOT NULL DEFAULT 'admin'");
   ensureColumn(sqlite, "users", "invited_via", "TEXT");
 
+  ensureColumn(sqlite, "videos", "state", "TEXT NOT NULL DEFAULT 'ready'");
+  ensureColumn(sqlite, "videos", "stack_id", "TEXT");
+  ensureColumn(sqlite, "videos", "version", "INTEGER NOT NULL DEFAULT 1");
+  // Après les colonnes : sur une base antérieure, l'index ne peut pas être
+  // créé par le DDL, la colonne n'existe pas encore à ce moment-là.
+  sqlite.exec("CREATE INDEX IF NOT EXISTS videos_stack_idx ON videos(stack_id)");
+  // Une conversion ne survit pas à un arrêt du serveur : ce qui était en
+  // cours ne finira jamais, autant le dire que laisser tourner un sablier.
+  sqlite.exec("UPDATE videos SET state = 'failed' WHERE state = 'processing'");
+
   // Un droit ouvert par un lien porte désormais ce lien. Sur une base
   // antérieure, on rattache les droits existants au lien qui a fait naître le
   // compte, quand la cible correspond : ce sont exactement ceux que la

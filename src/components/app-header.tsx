@@ -6,6 +6,7 @@ import { userColorIndex } from "@/lib/users";
 import { Logo } from "./logo";
 import { UserChip } from "./user-chip";
 import { TourButton } from "./tour/tour-button";
+import { CommandPalette } from "./command-palette";
 
 export function AppHeader({ user }: { user: Viewer }) {
   return (
@@ -35,6 +36,8 @@ export function AppHeader({ user }: { user: Viewer }) {
               Comptes
             </Link>
           )}
+
+          <CommandPalette isAdmin={isAdmin(user)} />
 
           <TourButton />
 

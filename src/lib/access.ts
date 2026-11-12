@@ -9,6 +9,7 @@ import {
   shareLinks,
   users,
   videoGrants,
+  videos,
   type UserRole,
 } from "@/db/schema";
 import { getCurrentUser, type CurrentUser } from "./auth";
@@ -151,6 +152,21 @@ export const getScope = cache(async (): Promise<Scope> => {
       .filter(live)
       .map((r) => r.videoId),
   );
+
+  // Un montage partagé seul l'est avec toutes ses versions : le client doit
+  // voir la v3 déposée après l'envoi du lien, c'est même pour ça qu'on la
+  // dépose. Le droit reste posé sur une ligne, la pile s'en déduit ici.
+  if (grantedVideos.size > 0) {
+    const stacked = db
+      .select({ id: videos.id, stackId: videos.stackId })
+      .from(videos)
+      .all()
+      .filter((v) => v.stackId !== null);
+    const stacks = new Set(
+      stacked.filter((v) => grantedVideos.has(v.id)).map((v) => v.stackId),
+    );
+    for (const v of stacked) if (stacks.has(v.stackId)) grantedVideos.add(v.id);
+  }
 
   if (roots.length === 0)
     return { roots: [], visible: new Set(), videos: grantedVideos };

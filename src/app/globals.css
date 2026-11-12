@@ -367,6 +367,42 @@ body {
 }
 
 /* Apparition en cascade de la grille : une seule fois, au chargement. */
+/* Les toasts montent de quelques pixels en apparaissant, rien de plus. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .toast-in {
+    animation: toast-in 160ms ease-out;
+  }
+  .palette[open] {
+    animation: toast-in 120ms ease-out;
+  }
+}
+
+/* Avancement dont on ne connaît pas la durée : une conversion. */
+@keyframes indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.indeterminate {
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
 @keyframes rise {
   from {
     opacity: 0;

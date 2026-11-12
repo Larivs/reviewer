@@ -9,6 +9,7 @@ import {
 } from "@/actions/folders";
 import type { FolderListItem } from "@/lib/folders";
 import { FolderIcon, PencilIcon, TrashIcon } from "./icons";
+import { HoldButton } from "./hold-button";
 
 type Mode = "idle" | "renaming" | "confirming";
 
@@ -135,14 +136,9 @@ export function FolderCard({
           </p>
         )}
         <div className="mt-2.5 flex gap-2">
-          <button
-            type="button"
-            onClick={confirmDelete}
-            disabled={pending}
-            className="btn !bg-status-changes !py-1 text-white disabled:opacity-45"
-          >
-            {pending ? "…" : "Supprimer"}
-          </button>
+          <HoldButton onConfirm={confirmDelete} disabled={pending || contents === null}>
+            {pending ? "…" : "Maintenir pour supprimer"}
+          </HoldButton>
           <button type="button" onClick={reset} className="btn btn-ghost !py-1">
             Annuler
           </button>

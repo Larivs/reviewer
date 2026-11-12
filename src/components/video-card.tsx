@@ -13,6 +13,7 @@ import { formatSize } from "@/lib/format";
 import { formatClock } from "@/lib/timecode";
 import { MoveIcon, PencilIcon, TrashIcon } from "./icons";
 import { Logo } from "./logo";
+import { HoldButton } from "./hold-button";
 import { StatusPicker } from "./status-picker";
 
 type Mode = "idle" | "renaming" | "confirming" | "moving";
@@ -196,7 +197,9 @@ export function VideoCard({
         <span className="label !text-status-changes">Supprimer</span>
         <p className="mt-1.5 truncate text-sm font-medium">{video.name}</p>
         <p className="mt-1 text-xs text-muted">
-          Le fichier et ses commentaires partent avec. Action définitive.
+          {video.versionCount > 1
+            ? `Les ${video.versionCount} versions et leurs commentaires partent avec. Action définitive.`
+            : "Le fichier et ses commentaires partent avec. Action définitive."}
         </p>
         {error && (
           <p role="alert" className="mt-2 text-xs text-status-changes">
@@ -204,14 +207,9 @@ export function VideoCard({
           </p>
         )}
         <div className="mt-2.5 flex gap-2">
-          <button
-            type="button"
-            onClick={confirmDelete}
-            disabled={pending}
-            className="btn !bg-status-changes !py-1 text-white disabled:opacity-45"
-          >
-            {pending ? "…" : "Supprimer"}
-          </button>
+          <HoldButton onConfirm={confirmDelete} disabled={pending}>
+            {pending ? "…" : "Maintenir pour supprimer"}
+          </HoldButton>
           <button type="button" onClick={reset} className="btn btn-ghost !py-1">
             Annuler
           </button>
@@ -258,6 +256,25 @@ export function VideoCard({
         <span className="tc-plate absolute bottom-1.5 right-1.5 !px-1.5 !py-0.5 text-[11px] text-fg-dim">
           {formatClock(video.duration ?? 0)}
         </span>
+
+        {/* Le fichier n'est pas encore lisible, ou ne le sera pas : on le dit
+            sur l'image, là où on s'attend à la voir. */}
+        {video.state !== "ready" && (
+          <span className="absolute inset-0 grid place-items-center bg-bg/75">
+            <span className={`label ${video.state === "failed" ? "!text-status-changes" : "!text-accent"}`}>
+              {video.state === "failed" ? "Conversion échouée" : "Conversion…"}
+            </span>
+          </span>
+        )}
+
+        {video.versionCount > 1 && (
+          <span
+            title={`${video.versionCount} versions, celle-ci est la dernière`}
+            className="tc-plate absolute bottom-1.5 left-1.5 !px-1.5 !py-0.5 text-[11px] text-accent"
+          >
+            v{video.version}
+          </span>
+        )}
 
         {video.openComments > 0 && (
           <span

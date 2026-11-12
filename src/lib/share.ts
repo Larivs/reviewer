@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { asc, eq, isNotNull } from "drizzle-orm";
+import { asc, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   folderGrants,
@@ -241,7 +241,23 @@ export function targetExists(target: ShareTarget) {
 
 /** Où atterrit le client une fois entré. */
 export function linkDestination(link: ShareLink) {
-  if (link.videoId) return `/v/${link.videoId}`;
+  if (link.videoId) {
+    // Le lien vise un montage : on atterrit sur sa dernière version.
+    const target = db
+      .select({ stackId: videos.stackId })
+      .from(videos)
+      .where(eq(videos.id, link.videoId))
+      .get();
+    const latest = target?.stackId
+      ? db
+          .select({ id: videos.id })
+          .from(videos)
+          .where(eq(videos.stackId, target.stackId))
+          .orderBy(desc(videos.version))
+          .get()
+      : null;
+    return `/v/${latest?.id ?? link.videoId}`;
+  }
   if (link.folderId) return `/f/${link.folderId}`;
   return "/";
 }

@@ -1,20 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notifyFolderChanged } from "@/lib/live";
 import { FORBIDDEN, requireStaff, requireVideoAccess } from "@/lib/access";
 import { getFolder, MAX_NAME_LENGTH, normalizeName } from "@/lib/folders";
 import {
-  deleteVideo,
+  deleteVideoStack,
   getVideo,
   moveVideo,
   renameVideo,
   setVideoStatus,
 } from "@/lib/videos";
 import { VIDEO_STATUSES, type VideoStatus } from "@/db/schema";
+import { sendWebhook } from "@/lib/webhook";
 import type { ActionResult } from "./folders";
+
+const STATUS_LABELS: Record<VideoStatus, string> = {
+  a_review: "À review",
+  en_cours: "En cours",
+  modifs_demandees: "Modifs demandées",
+  valide: "Validé",
+};
 
 function refresh() {
   revalidatePath("/", "layout");
+  // Les autres postes voient le changement sans attendre leur prochain tour.
+  notifyFolderChanged();
 }
 
 export async function renameVideoAction(
@@ -31,7 +42,7 @@ export async function renameVideoAction(
   if (rawName.trim().length > MAX_NAME_LENGTH)
     return { ok: false, error: `${MAX_NAME_LENGTH} caractères maximum.` };
 
-  renameVideo(id, name);
+  renameVideo(video, name);
   refresh();
   return { ok: true };
 }
@@ -51,7 +62,7 @@ export async function moveVideoAction(
     return { ok: false, error: "Ce dossier n'existe plus." };
   if ((video.folderId ?? null) === folderId) return { ok: true };
 
-  moveVideo(id, folderId);
+  moveVideo(video, folderId);
   refresh();
   return { ok: true };
 }
@@ -62,7 +73,8 @@ export async function deleteVideoAction(id: string): Promise<ActionResult> {
   const video = getVideo(id);
   if (!video) return { ok: false, error: "Cette vidéo n'existe plus." };
 
-  await deleteVideo(video);
+  // La vignette représente toute la pile : ses versions partent ensemble.
+  await deleteVideoStack(video);
   refresh();
   return { ok: true };
 }
@@ -76,13 +88,21 @@ export async function setVideoStatusAction(
   id: string,
   status: string,
 ): Promise<ActionResult> {
-  if (!(await requireVideoAccess(id))) return FORBIDDEN;
+  const access = await requireVideoAccess(id);
+  if (!access) return FORBIDDEN;
   // On valide contre la liste connue : la valeur vient du navigateur.
   if (!VIDEO_STATUSES.includes(status as VideoStatus))
     return { ok: false, error: "Statut inconnu." };
 
   setVideoStatus(id, status as VideoStatus);
   refresh();
+  if (status !== access.video.status)
+    sendWebhook({
+      type: "statut",
+      video: access.video,
+      author: access.viewer.name,
+      summary: `${access.viewer.name} a passé « ${access.video.name} » en ${STATUS_LABELS[status as VideoStatus]}`,
+    });
   return { ok: true };
 }
 

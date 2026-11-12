@@ -15,12 +15,21 @@ import {
   setCommentResolved,
   updateCommentBody,
 } from "@/lib/comments";
-import { getVideo } from "@/lib/videos";
+import { notifyComments, notifyFolderChanged } from "@/lib/live";
+import { sendWebhook } from "@/lib/webhook";
+import { formatClock } from "@/lib/timecode";
 import { sanitizeAnnotation, serializeAnnotation } from "@/lib/annotation";
 import type { ActionResult } from "./folders";
 
-function refresh() {
+/**
+ * Après toute écriture : la page de l'auteur, puis les autres. Ceux qui
+ * regardent la même vidéo rechargent ses notes, et la grille son décompte
+ * de notes ouvertes.
+ */
+function changed(videoId: string) {
   revalidatePath("/", "layout");
+  notifyComments(videoId);
+  notifyFolderChanged();
 }
 
 function validateBody(raw: string): { body: string } | { error: string } {
@@ -91,7 +100,14 @@ export async function createCommentAction(
     annotation,
     body: checked.body,
   });
-  refresh();
+  changed(input.videoId);
+  sendWebhook({
+    type: "note",
+    video,
+    author: user.name,
+    summary: `${user.name} a posé une note sur « ${video.name} » à ${formatClock(timecode)}`,
+    body: checked.body,
+  });
   return { ok: true, id: created.id };
 }
 
@@ -113,7 +129,7 @@ export async function updateCommentAction(
   if ("error" in checked) return { ok: false, error: checked.error };
 
   updateCommentBody(id, checked.body);
-  refresh();
+  changed(comment.videoId);
   return { ok: true };
 }
 
@@ -127,7 +143,7 @@ export async function deleteCommentAction(id: string): Promise<ActionResult> {
     return { ok: false, error: "Tu ne peux supprimer que tes propres commentaires." };
 
   deleteComment(id);
-  refresh();
+  changed(comment.videoId);
   return { ok: true };
 }
 
@@ -146,7 +162,7 @@ export async function toggleCommentResolvedAction(
   if (!(await requireVideoAccess(comment.videoId))) return FORBIDDEN;
 
   setCommentResolved(id, resolved);
-  refresh();
+  changed(comment.videoId);
   return { ok: true };
 }
 
@@ -165,13 +181,21 @@ export async function createReplyAction(
 
   const comment = getComment(commentId);
   if (!comment) return { ok: false, error: "Ce commentaire n'existe plus." };
-  if (!(await requireVideoAccess(comment.videoId))) return FORBIDDEN;
+  const access = await requireVideoAccess(comment.videoId);
+  if (!access) return FORBIDDEN;
 
   const checked = validateBody(rawBody);
   if ("error" in checked) return { ok: false, error: checked.error };
 
   insertReply({ commentId, userId: user.id, body: checked.body });
-  refresh();
+  changed(comment.videoId);
+  sendWebhook({
+    type: "reponse",
+    video: access.video,
+    author: user.name,
+    summary: `${user.name} a répondu sur « ${access.video.name} » à ${formatClock(comment.timecode)}`,
+    body: checked.body,
+  });
   return { ok: true };
 }
 
@@ -186,6 +210,6 @@ export async function deleteReplyAction(id: string): Promise<ActionResult> {
     return { ok: false, error: "Tu ne peux supprimer que tes propres réponses." };
 
   deleteReply(id);
-  refresh();
+  changed(parent.videoId);
   return { ok: true };
 }

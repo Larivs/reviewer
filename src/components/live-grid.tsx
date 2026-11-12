@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useLivePoll } from "./use-live-poll";
+import { useLiveEvents } from "./use-live-events";
 
 /**
  * Cadence de fond. La même que le sondage des notes, à la demande de Toma :
@@ -79,6 +80,22 @@ export function LiveGrid() {
   }, []);
 
   useLivePoll(tick, { pollMs: POLL_MS, minGapMs: MIN_GAP_MS, occupied });
+
+  // Le direct : un dépôt, un statut, une conversion finie sur un autre poste
+  // arrivent tout de suite. Même retenue que le sondage, on attend qu'aucun
+  // panneau ne soit ouvert, et une rafale d'événements ne fait qu'un rendu.
+  const pending = useRef(0);
+  useLiveEvents("/api/events", {
+    changed: () => {
+      window.clearTimeout(pending.current);
+      const attempt = () => {
+        if (occupied()) pending.current = window.setTimeout(attempt, 2000);
+        else tick();
+      };
+      pending.current = window.setTimeout(attempt, 300);
+    },
+  });
+  useEffect(() => () => window.clearTimeout(pending.current), []);
 
   return null;
 }
