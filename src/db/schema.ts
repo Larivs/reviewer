@@ -85,6 +85,13 @@ export const videoGrants = sqliteTable(
   {
     userId: text("user_id").notNull(),
     videoId: text("video_id").notNull(),
+    /**
+     * Lien qui a ouvert cet accès, ou `null` pour un droit posé à la main.
+     * Le droit ne vaut que tant que ce lien vit : c'est ce qui fait qu'une
+     * révocation retire vraiment l'accès, à qui que ce soit qui l'ait obtenu
+     * par là, y compris un compte né d'un autre lien.
+     */
+    linkId: text("link_id"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [
@@ -98,6 +105,8 @@ export const folderGrants = sqliteTable(
   {
     userId: text("user_id").notNull(),
     folderId: text("folder_id").notNull(),
+    /** Voir `videoGrants.linkId` : `null` = droit posé par un admin. */
+    linkId: text("link_id"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [

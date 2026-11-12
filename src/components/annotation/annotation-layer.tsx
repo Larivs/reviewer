@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { Annotation, Shape } from "@/lib/annotation";
+import { sanitizeAnnotation, type Annotation, type Shape } from "@/lib/annotation";
 import { usePictureRect } from "../player/use-picture-rect";
 import { capturePointer, releasePointer } from "@/lib/pointer";
 
@@ -141,7 +141,7 @@ export function AnnotationLayer({
   }
 
   function onPointerDown(event: React.PointerEvent<SVGSVGElement>) {
-    if (!active) return;
+    if (!active || event.button !== 0 || !event.isPrimary) return;
     event.preventDefault();
     capturePointer(event.currentTarget, event.pointerId);
     const p = toFraction(event);
@@ -184,7 +184,9 @@ export function AnnotationLayer({
   function onPointerUp(event: React.PointerEvent<SVGSVGElement>) {
     releasePointer(event.currentTarget, event.pointerId);
     startRef.current = null;
-    if (pending) addShape(pending);
+    // Mêmes seuils que le serveur : une forme qu'il écarterait resterait
+    // affichée dans le brouillon puis disparaîtrait à l'envoi.
+    if (pending && sanitizeAnnotation({ shapes: [pending] })) addShape(pending);
     setPending(null);
   }
 
@@ -199,7 +201,9 @@ export function AnnotationLayer({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      className={`absolute ${active ? "cursor-crosshair" : "pointer-events-none"}`}
+      // `touch-none` : au doigt, le navigateur prenait le geste pour un
+      // défilement et coupait le tracé au bout de quelques pixels.
+      className={`absolute ${active ? "cursor-crosshair touch-none" : "pointer-events-none"}`}
       style={{ left: rect.left, top: rect.top }}
       aria-hidden={!active}
     >

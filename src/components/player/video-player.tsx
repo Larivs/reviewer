@@ -158,6 +158,9 @@ export function VideoPlayer({
       if (!video) return;
       const limit = duration || video.duration || 0;
       const clamped = Math.min(Math.max(0, time), limit);
+      // Un saut franc annule ce qu'un glissement avait laissé en attente :
+      // sinon `seeked` resservait l'ancienne position par-dessus la nouvelle.
+      pendingSeek.current = null;
       video.currentTime = clamped;
       publishTime(clamped);
     },

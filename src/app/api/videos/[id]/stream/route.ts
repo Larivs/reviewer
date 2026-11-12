@@ -2,7 +2,8 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { readVideoOr404 } from "@/lib/access";
-import { getVideo, videoPath } from "@/lib/videos";
+import { parseRange } from "@/lib/http-range";
+import { videoPath, type Video } from "@/lib/videos";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,10 +18,7 @@ const MIME: Record<string, string> = {
 
 type Resolved = { file: string; size: number; type: string };
 
-async function resolve(id: string): Promise<Resolved | null> {
-  const video = getVideo(id);
-  if (!video) return null;
-
+async function resolve(video: Video): Promise<Resolved | null> {
   const file = videoPath(video.filename);
   try {
     const info = await stat(file);
@@ -120,33 +118,6 @@ function fileStream(
   );
 }
 
-/** `bytes=0-1023`, `bytes=500-` ou `bytes=-500` (derniers octets). */
-function parseRange(header: string, size: number) {
-  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
-  if (!match) return null;
-
-  const [, rawStart, rawEnd] = match;
-  if (rawStart === "" && rawEnd === "") return null;
-
-  let start: number;
-  let end: number;
-
-  if (rawStart === "") {
-    const suffix = Number(rawEnd);
-    if (suffix <= 0) return null;
-    start = Math.max(0, size - suffix);
-    end = size - 1;
-  } else {
-    start = Number(rawStart);
-    end = rawEnd === "" ? size - 1 : Math.min(Number(rawEnd), size - 1);
-  }
-
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size)
-    return null;
-
-  return { start, end };
-}
-
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -159,7 +130,7 @@ export async function GET(
   const access = await readVideoOr404(id);
   if (access instanceof Response) return access;
 
-  const target = await resolve(id);
+  const target = await resolve(access.video);
   if (!target) return new Response("Introuvable", { status: 404 });
 
   const { file, size, type } = target;
@@ -213,7 +184,7 @@ export async function HEAD(
   const access = await readVideoOr404(id);
   if (access instanceof Response) return new Response(null, { status: access.status });
 
-  const target = await resolve(id);
+  const target = await resolve(access.video);
   if (!target) return new Response(null, { status: 404 });
 
   return new Response(null, {

@@ -37,7 +37,7 @@ export const PROJECTS_TOUR: TourStep[] = [
     target: "video-actions",
     title: "Déplacer, renommer, supprimer",
     body:
-      "Ces trois boutons n'apparaissent qu'au survol de la vignette. Le premier envoie la vidéo dans un autre dossier.",
+      "Ces trois boutons sont sur chaque vignette, en retrait tant qu'on ne s'en approche pas. Le deuxième envoie la vidéo dans un autre dossier.",
     // Justement : sans ça le halo encadrerait trois boutons invisibles.
     reveal: true,
   },

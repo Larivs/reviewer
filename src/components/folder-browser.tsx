@@ -91,7 +91,7 @@ export function FolderBrowser({
                 // Cascade courte : la grille se pose, elle ne défile pas.
                 style={{ animationDelay: `${Math.min(i, 8) * 25}ms` }}
               >
-                <FolderCard folder={folder} />
+                <FolderCard folder={folder} canManage={canManage} />
               </div>
             ))}
           </div>

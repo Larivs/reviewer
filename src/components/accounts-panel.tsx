@@ -351,7 +351,13 @@ function AccountRow({
         {account.role === "invite" && (
           <button
             type="button"
-            onClick={() => setEditing((v) => !v)}
+            onClick={() => {
+              // Repartir des droits réels : un changement de rôle les a
+              // peut-être vidés, et d'anciennes coches laissaient croire
+              // à un accès qui n'existait plus.
+              if (!editing) setPicked(new Set(account.grants.map((g) => g.id)));
+              setEditing((v) => !v);
+            }}
             className="card-action shrink-0"
           >
             {editing ? "Fermer" : "Projets"}

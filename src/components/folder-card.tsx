@@ -24,7 +24,14 @@ function contentsLabel({ folderCount, videoCount }: FolderListItem) {
   return parts.length > 0 ? parts.join(" · ") : "Vide";
 }
 
-export function FolderCard({ folder }: { folder: FolderListItem }) {
+export function FolderCard({
+  folder,
+  canManage,
+}: {
+  folder: FolderListItem;
+  /** Renommer et supprimer sont réservés au studio, comme sur les vignettes. */
+  canManage: boolean;
+}) {
   const [mode, setMode] = useState<Mode>("idle");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -186,6 +193,7 @@ export function FolderCard({ folder }: { folder: FolderListItem }) {
 
       {/* Mêmes règles que sur la vignette vidéo : visibles au repos, en
           retrait tant qu'on ne s'en approche pas. */}
+      {canManage && (
       <div className="absolute right-2 top-2 z-10 flex gap-0.5 opacity-60 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
         <button
           type="button"
@@ -206,6 +214,7 @@ export function FolderCard({ folder }: { folder: FolderListItem }) {
           <TrashIcon className="size-3.5" />
         </button>
       </div>
+      )}
     </div>
   );
 }

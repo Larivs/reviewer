@@ -83,10 +83,13 @@ function LinkRowItem({ link }: { link: LinkRow }) {
         <button
           type="button"
           onClick={() => {
-            navigator.clipboard
-              ?.writeText(`${window.location.origin}/r/${link.token}`)
-              .then(() => setCopied(true))
-              .catch(() => {});
+            const url = `${window.location.origin}/r/${link.token}`;
+            // Le presse-papiers n'existe qu'en HTTPS ou sur localhost : sur
+            // l'adresse du réseau local le bouton ne faisait rien, sans le
+            // dire. On montre alors l'adresse, à copier à la main.
+            const fallback = () => window.prompt("Copie ce lien :", url);
+            if (!navigator.clipboard) return void fallback();
+            navigator.clipboard.writeText(url).then(() => setCopied(true), fallback);
           }}
           className="card-action ml-auto shrink-0"
         >

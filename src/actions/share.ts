@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { requireAdmin, requireStaff, getViewer } from "@/lib/access";
+import { requireAdmin, requireStaff, getViewer, isGuest } from "@/lib/access";
 import { createSession, hashPassword } from "@/lib/auth";
 import {
   applyLinkGrant,
@@ -15,13 +15,16 @@ import {
   getLinkByToken,
   linkDestination,
   linkIsExpired,
+  targetExists,
   uniqueName,
 } from "@/lib/share";
-import type { LinkDuration, ShareTarget } from "@/lib/share-types";
+import { LINK_DURATIONS, type LinkDuration, type ShareTarget } from "@/lib/share-types";
 import { randomUUID } from "node:crypto";
 import type { ActionResult } from "./folders";
 
 const MAX_GUEST_NAME = 40;
+/** Au-delà, hacher ne protège plus rien et coûte du processeur à qui le demande. */
+const MAX_PASSWORD = 200;
 
 function refresh() {
   revalidatePath("/", "layout");
@@ -41,6 +44,19 @@ export async function createShareLinkAction(
 ): Promise<ShareResult> {
   const staff = await requireStaff();
   if (!staff) return { ok: false, error: "Ton compte n'a pas les droits pour ça." };
+
+  // Les deux arguments viennent du navigateur. Une durée inconnue ne doit
+  // surtout pas retomber sur « sans expiration », et une cible inventée
+  // finirait en erreur de clé étrangère.
+  if (!LINK_DURATIONS.some((d) => d.key === duration))
+    return { ok: false, error: "Durée inconnue." };
+  if (
+    !target ||
+    (target.kind !== "folder" && target.kind !== "video") ||
+    typeof target.id !== "string" ||
+    !targetExists(target)
+  )
+    return { ok: false, error: "Ce que tu partages n'existe plus." };
 
   const link = createShareLink(target, duration, staff.id);
   refresh();
@@ -70,7 +86,7 @@ export async function joinWithLinkAction(
   if (!link || linkIsExpired(link))
     return { ok: false, error: "Ce lien n'est plus valide." };
 
-  const name = rawName.trim().replace(/\s+/g, " ").slice(0, MAX_GUEST_NAME);
+  const name = String(rawName).trim().replace(/\s+/g, " ").slice(0, MAX_GUEST_NAME);
   if (!name) return { ok: false, error: "Dis-nous comment tu t'appelles." };
 
   // Déjà connecté : on ajoute l'accès au compte en cours plutôt que d'en
@@ -78,30 +94,38 @@ export async function joinWithLinkAction(
   // vérifier ce que le client verra.
   const current = await getViewer();
   if (current) {
-    applyLinkGrant(current.id, link);
+    // Le studio voit déjà tout : lui poser un droit ne ferait que laisser
+    // une ligne sans effet.
+    if (isGuest(current)) applyLinkGrant(current.id, link);
     refresh();
     redirect(linkDestination(link));
   }
 
-  const known = findGuest(link.id, name);
-  const userId = known?.id ?? randomUUID();
+  // Une seule transaction : deux envois simultanés du même prénom ne doivent
+  // pas se disputer le nom libre, ni laisser un compte sans son droit.
+  const userId = db.transaction(() => {
+    const known = findGuest(link.id, name);
+    const id = known?.id ?? randomUUID();
 
-  if (!known) {
-    db.insert(users)
-      .values({
-        id: userId,
-        name: uniqueName(name),
-        // Empreinte volontairement invalide : ce compte ne peut pas servir
-        // à se connecter par le formulaire, seulement par le lien.
-        passwordHash: "!",
-        role: "invite",
-        invitedVia: link.id,
-        createdAt: Date.now(),
-      })
-      .run();
-  }
+    if (!known) {
+      db.insert(users)
+        .values({
+          id,
+          name: uniqueName(name),
+          // Empreinte volontairement invalide : ce compte ne peut pas servir
+          // à se connecter par le formulaire, seulement par le lien.
+          passwordHash: "!",
+          role: "invite",
+          invitedVia: link.id,
+          createdAt: Date.now(),
+        })
+        .run();
+    }
 
-  applyLinkGrant(userId, link);
+    applyLinkGrant(id, link);
+    return id;
+  });
+
   await createSession(userId);
   refresh();
   redirect(linkDestination(link));
@@ -116,25 +140,31 @@ export async function setupAdminAction(
   name: string,
   password: string,
 ): Promise<ActionResult> {
-  const count = db.select({ id: users.id }).from(users).all().length;
-  if (count > 0)
+  const installed = () =>
+    db.select({ id: users.id }).from(users).limit(1).get() !== undefined;
+  if (installed())
     return { ok: false, error: "Cette instance est déjà installée." };
 
-  const cleaned = name.trim().replace(/\s+/g, " ").slice(0, MAX_GUEST_NAME);
+  const cleaned = String(name).trim().replace(/\s+/g, " ").slice(0, MAX_GUEST_NAME);
   if (!cleaned) return { ok: false, error: "Le nom ne peut pas être vide." };
-  if (password.length < 8)
+  if (typeof password !== "string" || password.length < 8)
     return { ok: false, error: "Huit caractères minimum pour le mot de passe." };
+  if (password.length > MAX_PASSWORD)
+    return { ok: false, error: `${MAX_PASSWORD} caractères maximum pour le mot de passe.` };
 
   const id = randomUUID();
-  db.insert(users)
-    .values({
-      id,
-      name: cleaned,
-      passwordHash: await hashPassword(password),
-      role: "admin",
-      createdAt: Date.now(),
-    })
-    .run();
+  const passwordHash = await hashPassword(password);
+
+  // Le hachage prend du temps : on revérifie au moment d'écrire, dans la
+  // même transaction, sinon deux envois simultanés créaient deux admins.
+  const created = db.transaction(() => {
+    if (installed()) return false;
+    db.insert(users)
+      .values({ id, name: cleaned, passwordHash, role: "admin", createdAt: Date.now() })
+      .run();
+    return true;
+  });
+  if (!created) return { ok: false, error: "Cette instance est déjà installée." };
 
   await createSession(id);
   refresh();
@@ -143,7 +173,7 @@ export async function setupAdminAction(
 
 /** Le compte existe-t-il déjà ? Sert à fermer la page d'installation. */
 export async function instanceIsInstalled() {
-  return db.select({ id: users.id }).from(users).all().length > 0;
+  return db.select({ id: users.id }).from(users).limit(1).get() !== undefined;
 }
 
 /** Nom du compte visé, pour la liste des liens. */

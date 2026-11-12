@@ -48,7 +48,8 @@ aucun contenu client.</sub>
 
 ## Installation
 
-Il faut **Node 20 ou plus**. Rien d'autre : ffmpeg et SQLite sont embarqués.
+Il faut **Node 22.18 ou plus** : les scripts et les tests exécutent le
+TypeScript directement. Rien d'autre : ffmpeg et SQLite sont embarqués.
 
 ```bash
 git clone https://github.com/Larivs/reviewer.git
@@ -121,6 +122,10 @@ compromis que partout ailleurs, et c'est ce qui rend l'expiration importante.
 Elle est vérifiée à chaque affichage, pas seulement à l'ouverture du lien : un
 accès ouvert se referme au moment où le lien meurt, sans attendre que le
 cookie expire.
+
+Un droit ouvert par un lien reste **attaché à ce lien** : il se referme avec
+lui pour tous ceux qui sont entrés par là, y compris un invité déjà connu
+d'un autre lien.
 
 Fermer un lien retire les droits et coupe les sessions, mais **ne supprime ni
 les comptes ni leurs notes** : effacer la review d'un client parce qu'on
@@ -314,7 +319,8 @@ regarder avant de proposer un changement de fond.
 Avant d'ouvrir une pull request :
 
 ```bash
-npx tsc --noEmit    # le typage doit passer
+npm run typecheck   # le typage doit passer
+npm test            # les modules de calcul : timecode, Range, portée, annotations
 npm run build       # et la compilation aussi
 ```
 

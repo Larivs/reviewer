@@ -74,7 +74,7 @@ db.exec(DDL);
 
 const findUser = db.prepare("SELECT id, name FROM users WHERE name = ?");
 const listUsers = db.prepare(`
-  SELECT id, name, password_hash, role,
+  SELECT id, name, password_hash, role, invited_via,
          (SELECT count(*) FROM comments c WHERE c.user_id = users.id) AS notes
   FROM users ORDER BY created_at
 `);
@@ -131,7 +131,12 @@ for (const name of names) {
 // l'authentification était débrayée, encombrerait la liste de connexion
 // sans jamais pouvoir servir.
 
-const inutilisables = listUsers.all().filter((u) => u.password_hash === "!");
+// Les invités entrés par un lien portent la même empreinte `"!"`, exprès :
+// ce sont des clients, pas des restes. Les proposer à la suppression
+// effacerait leur review sur un simple « o ».
+const inutilisables = listUsers
+  .all()
+  .filter((u) => u.password_hash === "!" && u.invited_via === null);
 
 if (inutilisables.length > 0) {
   console.log("── Comptes sans mot de passe utilisable ──");
@@ -155,7 +160,7 @@ if (inutilisables.length > 0) {
 console.log("Comptes finaux :");
 for (const u of listUsers.all())
   console.log(
-    `  ${u.name} [${u.role}]${u.password_hash === "!" ? "  (sans mot de passe)" : ""}`,
+    `  ${u.name} [${u.role}]${u.invited_via ? "  (entré par un lien)" : u.password_hash === "!" ? "  (sans mot de passe)" : ""}`,
   );
 console.log("");
 

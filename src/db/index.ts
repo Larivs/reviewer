@@ -20,8 +20,9 @@ function ensureColumn(
   const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as {
     name: string;
   }[];
-  if (!columns.some((c) => c.name === column))
-    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  if (columns.some((c) => c.name === column)) return false;
+  sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  return true;
 }
 
 function connect() {
@@ -51,6 +52,24 @@ function connect() {
   ensureColumn(sqlite, "users", "role", "TEXT NOT NULL DEFAULT 'admin'");
   ensureColumn(sqlite, "users", "invited_via", "TEXT");
 
+  // Un droit ouvert par un lien porte désormais ce lien. Sur une base
+  // antérieure, on rattache les droits existants au lien qui a fait naître le
+  // compte, quand la cible correspond : ce sont exactement ceux que la
+  // révocation retirait déjà. Les autres restent des droits posés à la main.
+  const linkRef = "TEXT REFERENCES share_links(id) ON DELETE CASCADE";
+  if (ensureColumn(sqlite, "folder_grants", "link_id", linkRef))
+    sqlite.exec(`
+      UPDATE folder_grants SET link_id = (
+        SELECT l.id FROM users u JOIN share_links l ON l.id = u.invited_via
+        WHERE u.id = folder_grants.user_id AND l.folder_id = folder_grants.folder_id
+      )`);
+  if (ensureColumn(sqlite, "video_grants", "link_id", linkRef))
+    sqlite.exec(`
+      UPDATE video_grants SET link_id = (
+        SELECT l.id FROM users u JOIN share_links l ON l.id = u.invited_via
+        WHERE u.id = video_grants.user_id AND l.video_id = video_grants.video_id
+      )`);
+
   return drizzle(sqlite, { schema });
 }
 
@@ -60,5 +79,6 @@ const globalForDb = globalThis as unknown as {
   __reviewerDb?: ReturnType<typeof connect>;
 };
 
-export const db = globalForDb.__reviewerDb ?? connect();
-if (process.env.NODE_ENV !== "production") globalForDb.__reviewerDb = db;
+// Gardé aussi en production : une seule connexion par processus, quel que
+// soit le nombre de paquets serveur qui importent ce module.
+export const db = (globalForDb.__reviewerDb ??= connect());

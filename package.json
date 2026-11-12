@@ -17,7 +17,7 @@
     "frame-accurate"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
   "private": true,
   "type": "module",
@@ -28,7 +28,9 @@
     "serve": "node scripts/serve.mjs",
     "seed": "node scripts/seed.mjs",
     "sprites": "node scripts/sprites.mjs",
-    "backup": "node scripts/backup.mjs"
+    "backup": "node scripts/backup.mjs",
+    "test": "node --test \"tests/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
