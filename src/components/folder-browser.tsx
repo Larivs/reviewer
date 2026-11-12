@@ -1,5 +1,6 @@
 import { getBreadcrumb, listFolderOptions, listFolders } from "@/lib/folders";
 import { listVideos } from "@/lib/videos";
+import { formatDuration } from "@/lib/format";
 import { isStaff, type Scope, type Viewer } from "@/lib/access";
 import { Breadcrumb } from "./breadcrumb";
 import { FolderCard } from "./folder-card";
@@ -54,6 +55,12 @@ export function FolderBrowser({
   // Créer, déplacer, déposer : le rangement de l'espace appartient au studio.
   const canManage = isStaff(viewer);
 
+  // Ce qu'on vient chercher en ouvrant un projet : combien de montages, quel
+  // métrage, et surtout ce qui attend encore une réponse.
+  const footage = videos.reduce((sum, v) => sum + (v.duration ?? 0), 0);
+  const openNotes = videos.reduce((sum, v) => sum + v.openComments, 0);
+  const validated = videos.filter((v) => v.status === "valide").length;
+
   return (
     <>
       {/* Fil d'Ariane en retrait, titre en capitales lourdes en dessous :
@@ -65,6 +72,25 @@ export function FolderBrowser({
           <h1 className="heading mt-1.5 truncate text-[26px]" title={title}>
             {title}
           </h1>
+          {videos.length > 0 && (
+            <p className="meta mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 !text-[11.5px]">
+              <span>
+                {videos.length} vidéo{videos.length > 1 ? "s" : ""}, {formatDuration(footage)} de métrage
+              </span>
+              <span className={openNotes > 0 ? "!text-accent" : ""}>
+                {openNotes > 0
+                  ? `${openNotes} note${openNotes > 1 ? "s" : ""} en attente`
+                  : "aucune note en attente"}
+              </span>
+              {validated > 0 && (
+                <span className="!text-status-done">
+                  {validated === videos.length
+                    ? "tout est validé"
+                    : `${validated} validée${validated > 1 ? "s" : ""} sur ${videos.length}`}
+                </span>
+              )}
+            </p>
+          )}
         </div>
         {canManage && (
           <div className="flex items-center gap-2">

@@ -54,6 +54,56 @@ export function UploadZone({
     return () => window.removeEventListener("beforeunload", warn);
   }, [busy]);
 
+  /**
+   * Toute la page est une cible de dépôt. On lâche un fichier là où on
+   * regarde, c'est-à-dire sur la grille, et il fallait viser un cadre en bas
+   * de page. Un voile couvre l'écran dès qu'un fichier survole la fenêtre et
+   * dit où il ira.
+   *
+   * `depth` compte les entrées et sorties : `dragleave` se déclenche à chaque
+   * passage d'un élément à son voisin, et sans compteur le voile clignote.
+   * On ne réagit qu'aux fichiers, pas à un texte ou un lien qu'on déplace.
+   */
+  const handleRef = useRef<(list: FileList | null) => void>(() => {});
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (event: DragEvent) =>
+      Array.from(event.dataTransfer?.types ?? []).includes("Files");
+
+    const onEnter = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      depth += 1;
+      setDragging(true);
+    };
+    const onOver = (event: DragEvent) => {
+      // Sans ça le navigateur ouvre le fichier à la place de la page.
+      if (hasFiles(event)) event.preventDefault();
+    };
+    const onLeave = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setDragging(false);
+    };
+    const onDrop = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      depth = 0;
+      setDragging(false);
+      handleRef.current(event.dataTransfer?.files ?? null);
+    };
+
+    window.addEventListener("dragenter", onEnter);
+    window.addEventListener("dragover", onOver);
+    window.addEventListener("dragleave", onLeave);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragenter", onEnter);
+      window.removeEventListener("dragover", onOver);
+      window.removeEventListener("dragleave", onLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, []);
+
   function patch(key: string, changes: Partial<Item>) {
     setItems((current) =>
       current.map((item) => (item.key === key ? { ...item, ...changes } : item)),
@@ -127,35 +177,40 @@ export function UploadZone({
     });
   }
 
+  handleRef.current = handleFiles;
+
   const done = items.filter((i) => i.state === "fini").length;
   const failed = items.filter((i) => i.state === "erreur");
 
   return (
-    /* La zone prend la hauteur restante de la page : sur un dossier peu
-       rempli, le bas de l'écran devient une cible de dépôt franche plutôt
-       qu'un aplat noir avec un filet perdu au milieu. */
-    <div className="mt-7 flex flex-1 flex-col">
+    /* Dossier vide : la zone prend la hauteur restante et porte l'état vide.
+       Dès qu'il y a du contenu, elle se réduit à une ligne : toute la page
+       reçoit les fichiers, un grand cadre vide sous la grille ne servait plus
+       qu'à occuper le regard. */
+    <div className={`mt-7 flex flex-col ${empty ? "flex-1" : ""}`}>
+      {dragging && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-40 grid place-items-center bg-bg/80 backdrop-blur-[2px]"
+        >
+          <div className="neon rounded-lg border border-accent bg-surface px-10 py-8 text-center">
+            <p className="heading text-[22px]">Lâche pour envoyer</p>
+            <p className="mt-1.5 text-sm text-muted">
+              {atRoot ? "À la racine des projets" : "Dans ce dossier"}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          void handleFiles(e.dataTransfer.files);
-        }}
         data-tour="upload"
         /* `data-busy` pendant un envoi : c'est le seul état de la page dont
            la perte serait réellement grave, une file de plusieurs gigaoctets
            et sa requête en vol. La réconciliation la préserve déjà, mais on
            ne re-rend pas la route pendant ce moment-là pour autant. */
         data-busy={busy || undefined}
-        className={`flex min-h-32 flex-1 flex-col items-center justify-center rounded-lg border border-dashed px-5 py-6 text-center transition-colors ${
-          dragging
-            ? "border-accent bg-accent/[0.06]"
-            : "border-line bg-surface/40 hover:border-line-strong hover:bg-surface/70"
+        className={`flex items-center justify-center rounded-lg border border-dashed border-line bg-surface/40 text-center transition-colors hover:border-line-strong hover:bg-surface/70 ${
+          empty ? "min-h-32 flex-1 flex-col px-5 py-6" : "flex-wrap gap-x-4 gap-y-1 px-4 py-3"
         }`}
       >
         <input
@@ -183,7 +238,7 @@ export function UploadZone({
         )}
 
         <p className="text-sm text-muted">
-          Dépose des vidéos ici ou{" "}
+          Dépose des vidéos n&apos;importe où sur la page, ou{" "}
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -192,7 +247,7 @@ export function UploadZone({
             choisis des fichiers
           </button>
         </p>
-        <p className="label mt-2">MP4, MOV, WebM. ProRes, DNxHD et HEVC sont convertis à l'arrivée</p>
+        <p className={`label ${empty ? "mt-2" : ""}`}>MP4, MOV, WebM. ProRes, DNxHD et HEVC sont convertis à l'arrivée</p>
 
         {empty && (
           <span aria-hidden className="mt-5 h-px w-40 max-w-full bg-line" />

@@ -51,6 +51,13 @@ Supprimer un dossier supprime tout son sous-arbre : la confirmation annonce le
 décompte réel, calculé récursivement, et les fichiers vidéo correspondants sont
 retirés du disque en même temps que les lignes en base.
 
+## Déposer
+
+Toute la page reçoit les fichiers : un voile couvre l'écran dès qu'un fichier
+survole la fenêtre et dit où il ira. Le grand cadre en pointillés qui occupait
+le bas de chaque dossier ne reste que sur un dossier vide, où il porte l'état
+vide ; ailleurs il se réduit à une ligne.
+
 ## Sécurité
 
 **Tant que `AUTH_DISABLED=1`, il n'y a aucun contrôle d'accès** : ne pas
@@ -211,9 +218,22 @@ les dessins se décrocheraient de l'image dès qu'on agrandit. Vérifié, un
 point posé à 0,5/0,5 reste à 0,5/0,5 à 200 %, et on peut dessiner en étant
 zoomé.
 
-Survoler la piste affiche la vignette de l'instant pointé. Elle vient d'une
-**planche de 10 × 10 images** générée à l'upload, chargée seulement au premier
-survol : 180 Ko qu'on ne télécharge pas si personne ne survole. Les vidéos
+**La piste est une bande d'images.** Un filet de 4 px disait où on en était,
+pas ce qu'il y avait à cet endroit : on cherchait un plan en balayant la barre
+et en lisant l'aperçu. Les images sont maintenant posées bout à bout, comme
+sur une timeline de montage, sous une règle de timecode. Ce qui reste à voir
+recule dans l'ombre plutôt que de recevoir un aplat de couleur, et la tête de
+lecture porte un onglet pour se détacher des images.
+
+Tout vient d'une **planche de 10 × 10 images** générée à l'upload. Elle
+n'était chargée qu'au premier survol ; elle est le matériau de la page de
+review, donc demandée à l'ouverture. Sans planche (vidéo ancienne, conversion
+en cours), la piste retombe sur le filet d'avant. Survoler la piste affiche
+toujours la vignette de l'instant pointé.
+
+La même planche sert dans la grille : **glisser la souris sur une vignette
+fait défiler le film**. Là, elle n'est demandée qu'au premier survol de la
+vignette, une grille de quarante vidéos ne télécharge pas quarante planches. Les vidéos
 antérieures à cette fonction se rattrapent avec :
 
 ```bash
