@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireAdmin, requireStaff, getViewer, isGuest } from "@/lib/access";
-import { createSession, hashPassword } from "@/lib/auth";
+import { createSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { clearFailures, isLockedOut, recordFailure } from "@/lib/rate-limit";
 import {
   applyLinkGrant,
   createShareLink,
@@ -18,8 +19,14 @@ import {
   targetExists,
   uniqueName,
 } from "@/lib/share";
-import { LINK_DURATIONS, type LinkDuration, type ShareTarget } from "@/lib/share-types";
+import {
+  LINK_DURATIONS,
+  type LinkDuration,
+  type LinkOptions,
+  type ShareTarget,
+} from "@/lib/share-types";
 import { randomUUID } from "node:crypto";
+import { listLinkActivity, recordLinkEvent, type LinkActivity } from "@/lib/link-activity";
 import type { ActionResult } from "./folders";
 
 const MAX_GUEST_NAME = 40;
@@ -41,6 +48,7 @@ export type ShareResult =
 export async function createShareLinkAction(
   target: ShareTarget,
   duration: LinkDuration,
+  options: LinkOptions = {},
 ): Promise<ShareResult> {
   const staff = await requireStaff();
   if (!staff) return { ok: false, error: "Ton compte n'a pas les droits pour ça." };
@@ -58,7 +66,15 @@ export async function createShareLinkAction(
   )
     return { ok: false, error: "Ce que tu partages n'existe plus." };
 
-  const link = createShareLink(target, duration, staff.id);
+  const password = typeof options?.password === "string" ? options.password : "";
+  if (password && (password.length < 4 || password.length > MAX_PASSWORD))
+    return { ok: false, error: `Mot de passe du lien : entre 4 et ${MAX_PASSWORD} caractères.` };
+
+  const link = await createShareLink(target, duration, staff.id, {
+    password,
+    allowDownload: options?.allowDownload === true,
+    watermark: options?.watermark === true,
+  });
   refresh();
   return { ok: true, token: link.token };
 }
@@ -81,6 +97,7 @@ export async function deleteShareLinkAction(linkId: string): Promise<ActionResul
 export async function joinWithLinkAction(
   token: string,
   rawName: string,
+  rawPassword = "",
 ): Promise<ActionResult> {
   const link = getLinkByToken(token);
   if (!link || linkIsExpired(link))
@@ -93,10 +110,30 @@ export async function joinWithLinkAction(
   // créer un second. C'est le cas quand le studio ouvre son propre lien pour
   // vérifier ce que le client verra.
   const current = await getViewer();
+
+  // Le mot de passe du lien, s'il en a un. Le studio en est dispensé, il
+  // voit déjà tout ; un invité venu d'un autre lien, non. Les essais sont
+  // comptés par lien : le jeton est connu de qui le détient, c'est donc le
+  // mot de passe qu'on chercherait à deviner.
+  if (link.passwordHash && !(current && !isGuest(current))) {
+    const key = `lien:${link.id}`;
+    if (isLockedOut(key))
+      return { ok: false, error: "Trop d'essais. Réessaie dans quelques minutes." };
+    const password = String(rawPassword).slice(0, MAX_PASSWORD);
+    if (!password || !(await verifyPassword(link.passwordHash, password))) {
+      recordFailure(key);
+      return { ok: false, error: "Mot de passe du lien incorrect." };
+    }
+    clearFailures(key);
+  }
+
   if (current) {
     // Le studio voit déjà tout : lui poser un droit ne ferait que laisser
     // une ligne sans effet.
-    if (isGuest(current)) applyLinkGrant(current.id, link);
+    if (isGuest(current)) {
+      applyLinkGrant(current.id, link);
+      recordLinkEvent([link.id], "joined", current.name, link.videoId);
+    }
     refresh();
     redirect(linkDestination(link));
   }
@@ -125,6 +162,7 @@ export async function joinWithLinkAction(
     applyLinkGrant(id, link);
     return id;
   });
+  recordLinkEvent([link.id], "joined", name, link.videoId);
 
   await createSession(userId);
   refresh();
@@ -183,4 +221,10 @@ export async function linkAuthorName(userId: string) {
     db.select({ name: users.name }).from(users).where(eq(users.id, userId)).get()?.name ??
     null
   );
+}
+
+/** Ce qui s'est passé par ce lien, pour la page des comptes. */
+export async function linkActivityAction(linkId: string): Promise<LinkActivity[]> {
+  await requireAdmin();
+  return listLinkActivity(String(linkId));
 }

@@ -54,9 +54,9 @@ export function StatusPicker({
         onChange={(e) => change(e.target.value as VideoStatus)}
         aria-label="Statut de la vidéo"
         title="Changer le statut"
-        className={`cursor-pointer appearance-none rounded-sm border bg-clip-padding pr-4 font-mono uppercase tracking-[0.1em] transition-opacity hover:opacity-80 disabled:opacity-50 ${
+        className={`cursor-pointer appearance-none rounded-sm border bg-clip-padding pr-4 font-medium transition-opacity hover:opacity-80 disabled:opacity-50 ${
           STATUS_CLASSES[current]
-        } ${size === "sm" ? "py-0.5 pl-1.5 text-[10px]" : "py-1 pl-2 text-[11px]"}`}
+        } ${size === "sm" ? "py-0.5 pl-1.5 text-xs" : "py-1 pl-2 text-[13px]"}`}
       >
         {VIDEO_STATUSES.map((value) => (
           <option key={value} value={value} className="bg-surface-2 text-fg">

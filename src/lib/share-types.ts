@@ -21,3 +21,13 @@ export type LinkDuration = (typeof LINK_DURATIONS)[number]["key"];
 export type ShareTarget =
   | { kind: "folder"; id: string }
   | { kind: "video"; id: string };
+
+/** Ce qu'on règle en créant un lien, en plus de sa durée. */
+export type LinkOptions = {
+  /** Vide ou absent : pas de mot de passe. */
+  password?: string;
+  /** Le visiteur peut télécharger le fichier d'origine. */
+  allowDownload?: boolean;
+  /** Son nom est affiché en filigrane sur l'image. */
+  watermark?: boolean;
+};

@@ -25,6 +25,8 @@ import type { Annotation } from "@/lib/annotation";
 
 const RATES = [0.25, 0.5, 1, 1.5, 2] as const;
 const ZOOMS = [1, 1.5, 2, 3, 4] as const;
+/** Vitesses de la navette J/L. Au-delà de 8×, le décodeur ne suit plus. */
+const SHUTTLE_SPEEDS = [1, 2, 4, 8];
 const VOLUME_KEY = "reviewer:volume";
 const TC_MODE_KEY = "reviewer:tcMode";
 
@@ -60,8 +62,17 @@ type Props = {
   rangeArmed?: boolean;
   onRangeChange?: (range: Range | null) => void;
   onRangeDone?: () => void;
+  /** Texte répété en filigrane sur l'image, pour un visiteur de lien. */
+  watermark?: string | null;
   ref?: React.Ref<PlayerHandle>;
 };
+
+/** Motif du filigrane : le texte en biais, dans un SVG répété en fond. */
+function watermarkPattern(text: string) {
+  const safe = text.replace(/[<>&"']/g, " ");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="180"><text x="170" y="96" text-anchor="middle" transform="rotate(-24 170 90)" font-family="sans-serif" font-size="17" font-weight="600" fill="white" stroke="black" stroke-width="0.6">${safe}</text></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
 
 /** Ne pas voler les touches pendant qu'on écrit un commentaire. */
 function isTyping(target: EventTarget | null) {
@@ -95,6 +106,7 @@ export function VideoPlayer({
   rangeArmed = false,
   onRangeChange,
   onRangeDone,
+  watermark = null,
   ref,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -114,6 +126,23 @@ export function VideoPlayer({
   const [rate, setRate] = useState<number>(1);
   const [fullscreen, setFullscreen] = useState(false);
   const [loop, setLoop] = useState(false);
+  /**
+   * Navette, comme sur un banc de montage : L avance, J recule, et chaque
+   * appui double la vitesse (1, 2, 4, 8). Positif vers l'avant, négatif vers
+   * l'arrière, 0 quand elle est au repos.
+   */
+  const [shuttle, setShuttle] = useState(0);
+  const shuttleRef = useRef(0);
+  shuttleRef.current = shuttle;
+  /** Vitesse choisie dans le menu, à rétablir quand la navette s'arrête. */
+  const baseRate = useRef(1);
+  /** Entrée et sortie de boucle, posées avec I et O. */
+  const [loopRange, setLoopRange] = useState<{ in: number | null; out: number | null }>({
+    in: null,
+    out: null,
+  });
+  const loopRangeRef = useRef(loopRange);
+  loopRangeRef.current = loopRange;
   const [tcMode, setTcMode] = useState<TcMode>("timecode");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -146,6 +175,15 @@ export function VideoPlayer({
 
   const publishTime = useCallback(
     (time: number) => {
+      // Boucle entre deux points : arrivée à la sortie, la lecture repart de
+      // l'entrée. Seulement en lecture, à l'arrêt on doit pouvoir se placer
+      // où l'on veut, y compris après la sortie.
+      const video = videoRef.current;
+      const range = loopRangeRef.current;
+      if (video && !video.paused && range.in !== null && range.out !== null && time >= range.out) {
+        video.currentTime = range.in;
+        time = range.in;
+      }
       setCurrentTime(time);
       onTimeChange?.(time);
     },
@@ -161,6 +199,8 @@ export function VideoPlayer({
       // Un saut franc annule ce qu'un glissement avait laissé en attente :
       // sinon `seeked` resservait l'ancienne position par-dessus la nouvelle.
       pendingSeek.current = null;
+      // Se déplacer à la main reprend la main sur la navette.
+      setShuttle(0);
       video.currentTime = clamped;
       publishTime(clamped);
     },
@@ -216,9 +256,83 @@ export function VideoPlayer({
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
+    // En navette, lecture/pause veut dire « stop » : c'est K sur un banc. En
+    // marche arrière le lecteur est déjà en pause, et basculer l'aurait
+    // relancé vers l'avant au lieu de l'arrêter.
+    if (shuttleRef.current !== 0) {
+      setShuttle(0);
+      video.pause();
+      return;
+    }
     if (video.paused) void video.play().catch(() => {});
     else video.pause();
   }, []);
+
+  /** Un cran de navette dans un sens. Changer de sens repart de 1×. */
+  const pushShuttle = useCallback((direction: 1 | -1) => {
+    setShuttle((current) => {
+      if (Math.sign(current) !== direction) return direction;
+      const next = SHUTTLE_SPEEDS[SHUTTLE_SPEEDS.indexOf(Math.abs(current)) + 1];
+      return direction * (next ?? SHUTTLE_SPEEDS[SHUTTLE_SPEEDS.length - 1]);
+    });
+  }, []);
+
+  /**
+   * La navette en marche. Vers l'avant, c'est la vitesse du lecteur. Vers
+   * l'arrière, un élément vidéo ne sait pas lire à l'envers : on recule la
+   * position à chaque rafraîchissement d'écran. La cible descend en continu,
+   * mais n'est donnée au décodeur que lorsqu'il a fini la recherche
+   * précédente, sinon il n'en termine aucune et l'image reste figée.
+   */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || shuttle === 0) return;
+
+    if (shuttle > 0) {
+      video.playbackRate = shuttle;
+      void video.play().catch(() => {});
+      return () => {
+        video.playbackRate = baseRate.current;
+      };
+    }
+
+    video.pause();
+    let target = video.currentTime;
+    let last = performance.now();
+    let raf = requestAnimationFrame(function back(now) {
+      target -= ((now - last) / 1000) * -shuttle;
+      last = now;
+      if (target <= 0) {
+        video.currentTime = 0;
+        publishTime(0);
+        setShuttle(0);
+        return;
+      }
+      if (!video.seeking) video.currentTime = target;
+      publishTime(target);
+      raf = requestAnimationFrame(back);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [shuttle, publishTime]);
+
+  /**
+   * Clic sur le repère d'une note. Boucle activée, on tourne de cette note à
+   * la suivante : c'est le geste pour repasser un passage commenté jusqu'à
+   * être sûr de ce qu'on en dit.
+   */
+  const seekMarker = useCallback(
+    (time: number) => {
+      seekTo(time);
+      if (!loop) return;
+      const own = markers.find((m) => m.time === time);
+      const next = markers
+        .map((m) => m.time)
+        .filter((t) => t > time + 0.05)
+        .sort((a, b) => a - b)[0];
+      setLoopRange({ in: time, out: own?.end ?? next ?? duration });
+    },
+    [seekTo, loop, markers, duration],
+  );
 
   const toggleFullscreen = useCallback(() => {
     // Sur l'enveloppe et non la vidéo : sinon les contrôles disparaissent
@@ -283,7 +397,11 @@ export function VideoPlayer({
       setPlaying(true);
       setHasPlayed(true);
     };
-    const onPause = () => setPlaying(false);
+    const onPause = () => {
+      setPlaying(false);
+      // Fin du film ou pause : la navette avant n'a plus rien à entraîner.
+      setShuttle((current) => (current > 0 ? 0 : current));
+    };
     const onVolume = () => {
       setMuted(video.muted);
       setVolume(video.volume);
@@ -454,12 +572,32 @@ export function VideoPlayer({
         case "j":
         case "J":
           event.preventDefault();
-          seekTo(video.currentTime - 1);
+          pushShuttle(-1);
           return;
         case "l":
         case "L":
           event.preventDefault();
-          seekTo(video.currentTime + 1);
+          pushShuttle(1);
+          return;
+        case "i":
+        case "I": {
+          event.preventDefault();
+          const at = video.currentTime;
+          // Une entrée posée après la sortie invalide celle-ci.
+          setLoopRange((r) => ({ in: at, out: r.out !== null && r.out > at ? r.out : null }));
+          return;
+        }
+        case "o":
+        case "O": {
+          event.preventDefault();
+          const at = video.currentTime;
+          setLoopRange((r) => ({ in: r.in !== null && r.in < at ? r.in : null, out: at }));
+          return;
+        }
+        case "x":
+        case "X":
+          event.preventDefault();
+          setLoopRange({ in: null, out: null });
           return;
         case "Home":
           event.preventDefault();
@@ -496,7 +634,7 @@ export function VideoPlayer({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [duration, seekTo, stepFrames, togglePlay, toggleFullscreen]);
+  }, [duration, seekTo, stepFrames, togglePlay, toggleFullscreen, pushShuttle]);
 
   function changeVolume(value: number) {
     const video = videoRef.current;
@@ -580,6 +718,19 @@ export function VideoPlayer({
             }`}
           />
 
+          {/* Filigrane : le nom du visiteur, répété en travers de l'image.
+              Il dissuade et il signe une capture d'écran, il ne protège pas
+              le fichier : un tracé par-dessus la vidéo s'enlève à qui sait
+              ouvrir les outils du navigateur. Dans l'enveloppe de zoom, pour
+              qu'agrandir l'image ne le fasse pas sortir du cadre. */}
+          {watermark && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 select-none opacity-[0.16]"
+              style={{ backgroundImage: watermarkPattern(watermark), backgroundSize: "340px 180px" }}
+            />
+          )}
+
           {onDraftChange && (
             <AnnotationLayer
               videoRef={videoRef}
@@ -643,6 +794,8 @@ export function VideoPlayer({
           activeMarkerId={activeMarkerId}
           onSeek={seekTo}
           onScrub={scrubTo}
+          onMarkerSeek={seekMarker}
+          loop={loopRange}
           range={range}
           rangeArmed={rangeArmed}
           onRangeChange={onRangeChange}
@@ -696,6 +849,26 @@ export function VideoPlayer({
             >
               <LoopIcon className="size-4.5" />
             </button>
+
+            {/* États passagers du transport. Ils n'apparaissent que lorsqu'ils
+                sont en jeu : une rangée de contrôles ne grossit pas pour des
+                modes qu'on n'utilise pas. */}
+            {shuttle !== 0 && (
+              <span className="meta ml-1 !text-accent" aria-live="polite">
+                {shuttle < 0 ? "◀◀" : "▶▶"} {Math.abs(shuttle)}×
+              </span>
+            )}
+            {(loopRange.in !== null || loopRange.out !== null) && (
+              <button
+                type="button"
+                onClick={() => setLoopRange({ in: null, out: null })}
+                title="Retirer les points de boucle (X)"
+                className="meta ml-1 rounded-sm border border-line px-1.5 py-0.5 transition-colors hover:border-line-strong hover:!text-fg"
+              >
+                {loopRange.in !== null ? formatClock(loopRange.in) : "…"} →{" "}
+                {loopRange.out !== null ? formatClock(loopRange.out) : "…"} ✕
+              </button>
+            )}
           </div>
 
           {/* Afficheur central. Un clic change de lecture : timecode,
@@ -707,7 +880,7 @@ export function VideoPlayer({
             className="tc-plate justify-self-end text-[13px] transition-colors hover:border-line-strong @min-[660px]:justify-self-center"
           >
             <span className="text-accent">{readout.value}</span>
-            <span className="text-[11px] text-muted">/ {readout.total}</span>
+            <span className="text-xs text-muted">/ {readout.total}</span>
           </button>
 
           <div className="col-span-2 flex items-center justify-end gap-1.5 @min-[660px]:col-span-1">
@@ -726,7 +899,7 @@ export function VideoPlayer({
                 type="button"
                 onClick={() => changeZoom(1)}
                 title="Revenir à 100 %"
-                className={`min-w-11 rounded-sm px-1 py-1 font-mono text-[11px] tabular-nums transition-colors hover:bg-surface-3 ${
+                className={`min-w-11 rounded-sm px-1 py-1 font-mono text-xs tabular-nums transition-colors hover:bg-surface-3 ${
                   zoom > 1 ? "text-accent" : "text-muted"
                 }`}
               >
@@ -772,10 +945,11 @@ export function VideoPlayer({
               value={rate}
               onChange={(e) => {
                 const video = videoRef.current;
-                if (video) video.playbackRate = Number(e.target.value);
+                baseRate.current = Number(e.target.value);
+                if (video) video.playbackRate = baseRate.current;
               }}
               aria-label="Vitesse de lecture"
-              className="rounded-sm border border-line bg-surface-3 px-1.5 py-1 font-mono text-[11px] text-fg-dim"
+              className="rounded-sm border border-line bg-surface-3 px-1.5 py-1 font-mono text-xs text-fg-dim"
             >
               {RATES.map((r) => (
                 <option key={r} value={r}>

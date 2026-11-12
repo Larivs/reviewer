@@ -159,6 +159,69 @@ lancés ensemble ne restent pas ensemble, chacun tamponne à son rythme. Le
 **volet** superpose les deux images avec une séparation qu'on déplace, c'est
 lui qui montre au pixel ce qui a bougé sur un raccord.
 
+## Images et sons
+
+Une image fixe est convertie en une seconde de vidéo, un son en une vidéo dont
+l'image est sa forme d'onde. Plutôt qu'une seconde et une troisième
+visionneuse, chacune avec son zoom, son calque de dessin et ses notes : tout
+passe par le lecteur, et ce qui existe pour une vidéo, annotations, versions,
+comparaison en volet, marche sans une ligne de plus. La forme d'onde est en
+prime utile, on y voit où sont les silences.
+
+L'original est gardé à côté de la copie lisible (`videos.original`). C'est lui
+que rend le téléchargement, y compris pour un ProRes converti.
+
+## Liens : mot de passe, téléchargement, filigrane
+
+Les trois se règlent par lien. Ce qu'un invité peut faire d'une vidéo se
+déduit des liens **par lesquels il l'atteint** (`videoCapabilities`) : il
+télécharge si l'un d'eux le permet, il est filigrané si l'un d'eux le demande.
+Le studio télécharge toujours et n'est jamais filigrané.
+
+Le mot de passe est haché comme celui d'un compte, et ses essais sont comptés
+par lien. Un invité déjà connu qui ouvre un lien protégé doit le donner aussi,
+seul le studio en est dispensé.
+
+Le filigrane est un calque par-dessus l'image. Il dissuade et signe une
+capture d'écran, il ne protège rien : l'incruster dans les pixels demanderait
+une conversion par visiteur.
+
+## Notes internes
+
+Une note cochée « interne » n'est envoyée qu'au studio. Le filtre est côté
+serveur, sur les trois sorties : la page, la route de sondage, les exports.
+Pour un invité elle n'existe pas, y compris s'il devine son identifiant pour
+y répondre ou la résoudre.
+
+Le **numéro** d'une note est calculé sur la liste entière, avant le filtre :
+un invité voit donc des trous (« 1, 3, 4 »). C'est voulu, renuméroter ferait
+de « la note 3 » une note différente pour le client et pour le monteur.
+
+La case se décoche après chaque envoi : restée cochée, elle ferait partir en
+interne la note suivante, celle qu'on destinait au client.
+
+## Journal d'un lien
+
+`share_link_events` note ce qui passe par un lien : entrée, visionnage (une
+ligne par heure et par vidéo, pas une par rendu), commentaire,
+téléchargement. Le nom est recopié dans la ligne pour rester lisible après la
+suppression du compte ; les lignes partent avec le lien. C'est un journal, pas
+un contrôle : une écriture qui échoue ne refuse rien.
+
+## Mentions et courriel
+
+`@Prénom` est reconnu **côté serveur**, parmi les noms de comptes, en prenant
+le plus long nom qui commence après l'arobase (« @Toma (2) » ne prévient pas
+Toma). Le navigateur ne reçoit que les noms effectivement cités dans une
+note, jamais la liste des comptes : un client n'a pas à lire le nom des autres
+clients du studio. Pour la même raison, la saisie ne propose que ceux qui ont
+déjà parlé sur la vidéo.
+
+Le courriel est optionnel (`REVIEWER_SMTP_URL`). Le studio est prévenu de
+chaque note ; une personne mentionnée ne l'est que si elle a déjà pris part à
+la review de cette vidéo, sans quoi mentionner un client lui enverrait le
+contenu d'un projet qui n'est pas le sien.
+
 ## Le direct
 
 Un flux d'événements (SSE, `/api/events`) prévient les navigateurs qu'une
@@ -188,9 +251,19 @@ permet pas d'avancer image par image.
 - Vitesse de 0,25× à 2×, volume mémorisé par navigateur.
 
 Raccourcis : Espace/K lecture-pause, flèches une image, Maj+flèches une
-seconde, `,`/`.` une image (convention Premiere), J/L une seconde, 0-9 pour
-aller à un pourcentage, Début/Fin, M le son, F le plein écran, R la boucle,
-Ctrl+molette le zoom. La liste est dépliable sous le lecteur.
+seconde, `,`/`.` une image (convention Premiere), J/L la navette, I/O/X les
+points de boucle, 0-9 pour aller à un pourcentage, Début/Fin, M le son, F le
+plein écran, R la boucle, Ctrl+molette le zoom. La liste est dépliable sous
+le lecteur.
+
+**La navette J/K/L** est celle des bancs de montage : L avance, J recule,
+chaque appui double la vitesse (1, 2, 4, 8), K arrête. Vers l'avant c'est la
+vitesse du lecteur. Vers l'arrière, un élément vidéo ne sait pas lire à
+l'envers : on recule la position à chaque rafraîchissement d'écran, sans son.
+
+**La boucle entre deux points** : I pose l'entrée, O la sortie, X les retire.
+Boucle (R) activée, un clic sur le repère d'une note tourne de cette note à la
+suivante, pour repasser un passage commenté.
 
 ### Tenir dans l'écran
 
@@ -259,9 +332,13 @@ Chaque note est attachée à un instant précis de la vidéo. **Un clic n'import
 où sur la note** y ramène à l'image exacte, la pastille de timecode seule ne
 couvrait que 6 % de la carte, il fallait viser. Cliquer un bouton ne navigue
 pas, et sélectionner du texte non plus : on peut toujours copier une note.
-Chaque note apparaît aussi en repère sur la piste de
-lecture, vert quand elle est résolue. Ces repères ne mesurent que 8 × 7 px :
-leur zone de clic est élargie en dehors du dessin, sinon on ne les vise pas.
+Chaque note apparaît aussi sur la piste, deux fois. **Sur la bande**, un trait
+à la couleur de son auteur, et un bandeau sur toute sa durée pour une plage :
+on voit où il y a quelque chose à reprendre sans quitter l'image des yeux.
+**Sous la bande**, une pastille de 18 px à son numéro, le même que dans le
+panneau. C'étaient des triangles de 8 × 7 px : on ne voyait ni où étaient les
+notes, ni laquelle était laquelle. Une note résolue garde sa couleur et
+recule en opacité.
 
 **Comment le timecode est capturé.** Se placer dans le champ met la vidéo en
 pause : on annote une image, pas un flux qui défile. La puce de timecode suit
@@ -299,11 +376,9 @@ ponctuelle posée à l'intérieur d'une plage disparaissait sous la barre, on ne
 voyait qu'un seul problème là où il y en avait deux. Trois rangées au
 maximum, et la zone ne grandit que si elle en a besoin.
 
-Les deux types se distinguent par la **forme**, pas par la couleur : la
-palette n'a qu'un accent et en ajouter un affaiblirait la règle « accent =
-demande attention ». Une note ponctuelle est un triangle plein, une plage un
-crochet entrée/sortie, montants aux deux bouts, trait mince entre les deux,
-la notation du montage. Le repère de la note sous la tête de lecture est mis
+Les deux types se distinguent par la **forme**, pas par la couleur, qui dit
+déjà *qui* : une note ponctuelle est une pastille ronde, une plage une
+pastille étirée sur sa durée. Le repère de la note sous la tête de lecture est mis
 en avant, ce qui relie la piste au panneau latéral. Une plage reste active sur tout son intervalle, une note ponctuelle
 seulement dans une fenêtre d'une demi-seconde.
 

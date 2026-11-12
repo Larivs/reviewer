@@ -216,7 +216,7 @@ export function UploadZone({
         <input
           ref={inputRef}
           type="file"
-          accept="video/*,.mp4,.mov,.m4v,.webm,.mkv"
+          accept="video/*,image/*,audio/*,.mp4,.mov,.m4v,.webm,.mkv,.mxf"
           multiple
           hidden
           onChange={(e) => {
@@ -238,7 +238,7 @@ export function UploadZone({
         )}
 
         <p className="text-sm text-muted">
-          Dépose des vidéos n&apos;importe où sur la page, ou{" "}
+          Dépose des fichiers n&apos;importe où sur la page, ou{" "}
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -247,7 +247,7 @@ export function UploadZone({
             choisis des fichiers
           </button>
         </p>
-        <p className={`label ${empty ? "mt-2" : ""}`}>MP4, MOV, WebM. ProRes, DNxHD et HEVC sont convertis à l'arrivée</p>
+        <p className={`label ${empty ? "mt-2" : ""}`}>Vidéo, image ou son. ProRes, DNxHD et HEVC sont convertis à l'arrivée</p>
 
         {empty && (
           <span aria-hidden className="mt-5 h-px w-40 max-w-full bg-line" />
@@ -260,7 +260,7 @@ export function UploadZone({
             <li key={item.key} className="rounded-lg border border-line bg-surface px-3 py-2">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="truncate text-sm">{item.name}</span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
+                <span className="shrink-0 font-mono text-xs tabular-nums text-muted">
                   {item.state === "envoi" && `${Math.round(item.progress * 100)} %`}
                   {item.state === "attente" && "En attente"}
                   {item.state === "fini" && "Envoyée"}

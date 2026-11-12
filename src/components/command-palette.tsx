@@ -101,10 +101,10 @@ export function CommandPalette({ isAdmin }: { isAdmin: boolean }) {
         type="button"
         onClick={open}
         title="Chercher un projet ou une vidéo"
-        className="flex items-center gap-2 rounded-sm border border-line px-2 py-1 text-[11px] text-muted transition-colors hover:border-line-strong hover:text-fg"
+        className="flex items-center gap-2 rounded-sm border border-line px-2 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg"
       >
         Rechercher
-        <kbd className="rounded-sm border border-line bg-surface-3 px-1 font-mono text-[10px]">
+        <kbd className="rounded-sm border border-line bg-surface-3 px-1 font-mono text-[11px]">
           {mac ? "⌘" : "Ctrl"} K
         </kbd>
       </button>

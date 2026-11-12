@@ -22,7 +22,7 @@ function SectionTitle({
       <h2 className="label !text-fg-dim">{children}</h2>
       {/* Le décompte est une information, pas une décoration : il était en
           `line-strong`, c'est-à-dire illisible. */}
-      <span className="rounded-sm bg-surface-2 px-1.5 py-px font-mono text-[10px] tabular-nums text-muted">
+      <span className="rounded-sm bg-surface-2 px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
         {count}
       </span>
       {/* Filet qui court jusqu'au bord : structure la page sans encadrer. */}
@@ -73,7 +73,7 @@ export function FolderBrowser({
             {title}
           </h1>
           {videos.length > 0 && (
-            <p className="meta mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 !text-[11.5px]">
+            <p className="meta mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 !text-[12.5px]">
               <span>
                 {videos.length} vidéo{videos.length > 1 ? "s" : ""}, {formatDuration(footage)} de métrage
               </span>

@@ -6,16 +6,20 @@ import { FALLBACK_FPS, formatTimecode, frameAt } from "./timecode.ts";
  * Sortir les notes de l'app, pour qu'elles arrivent là où le monteur
  * travaille. Trois formes, parce que trois usages :
  *
+ * - **XML** : une séquence que Premiere Pro ouvre (Fichier, Importer), avec
+ *   une note par marqueur. Le format est celui de Final Cut Pro 7, que
+ *   Premiere lit nativement : rien à installer côté montage.
  * - **EDL** : des marqueurs que DaVinci Resolve pose sur la timeline
  *   (clic droit sur la timeline dans le chutier, Timelines, Import,
  *   Timeline Markers from EDL).
  * - **CSV** : un tableur, ou tout outil qui sait lire des colonnes.
  * - **Texte** : à coller dans un message ou à imprimer.
  */
-export const EXPORT_FORMATS = ["edl", "csv", "txt"] as const;
+export const EXPORT_FORMATS = ["xml", "edl", "csv", "txt"] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 export const EXPORT_MIME: Record<ExportFormat, string> = {
+  xml: "application/xml; charset=utf-8",
   edl: "text/plain; charset=utf-8",
   csv: "text/csv; charset=utf-8",
   txt: "text/plain; charset=utf-8",
@@ -105,4 +109,70 @@ export function toText(title: string, comments: CommentWithAuthor[], fps: number
   });
 
   return [...head, ...body].join("\n");
+}
+
+const xml = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/**
+ * Séquence Premiere dont les marqueurs sont les notes.
+ *
+ * Les marqueurs d'une séquence se comptent **en images depuis son début**,
+ * pas en timecode : pas de départ à une heure à compenser comme pour l'EDL.
+ * Les cadences NTSC (23,976, 29,97, 59,94) s'écrivent sur leur base entière
+ * avec `ntsc` à vrai, c'est la convention du format.
+ *
+ * Une note ponctuelle a une sortie à -1, une plage sa dernière image. Les
+ * réponses sont jointes au commentaire du marqueur : dans Premiere, le fil
+ * n'existe pas, mais le monteur doit lire la conclusion.
+ */
+export function toPremiereXml(
+  title: string,
+  comments: CommentWithAuthor[],
+  fps: number | null,
+  duration: number | null,
+) {
+  const real = fps ?? FALLBACK_FPS;
+  const base = Math.round(real);
+  const ntsc = Math.abs(real - base) > 0.001 ? "TRUE" : "FALSE";
+  const rate = `<rate><timebase>${base}</timebase><ntsc>${ntsc}</ntsc></rate>`;
+  const frames = Math.max(1, frameAt(duration ?? 0, real));
+
+  const markers = comments.map((c) => {
+    const start = frameAt(c.timecode, real);
+    const end = c.timecodeEnd === null ? -1 : Math.max(start + 1, frameAt(c.timecodeEnd, real));
+    const thread = [c.body, ...c.replies.map((r) => `${r.authorName} : ${r.body}`)].join("\n");
+    return [
+      "    <marker>",
+      `      <name>${xml(`#${c.number} ${c.authorName}${c.resolved ? " (résolue)" : ""}`)}</name>`,
+      `      <comment>${xml(thread)}</comment>`,
+      `      <in>${start}</in>`,
+      `      <out>${end}</out>`,
+      "    </marker>",
+    ].join("\n");
+  });
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    "<!DOCTYPE xmeml>",
+    '<xmeml version="4">',
+    "  <sequence>",
+    `    <name>${xml(`${title} (notes)`)}</name>`,
+    `    <duration>${frames}</duration>`,
+    `    ${rate}`,
+    "    <timecode>",
+    `      ${rate}`,
+    "      <string>00:00:00:00</string>",
+    "      <frame>0</frame>",
+    "      <displayformat>NDF</displayformat>",
+    "    </timecode>",
+    "    <media>",
+    "      <video><track/></video>",
+    "      <audio><track/></audio>",
+    "    </media>",
+    ...markers,
+    "  </sequence>",
+    "</xmeml>",
+    "",
+  ].join("\n");
 }

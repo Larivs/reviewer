@@ -2,8 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { FORBIDDEN, requireVideoAccess } from "@/lib/access";
 import {
+  FORBIDDEN,
+  isGuest,
+  requireStaff,
+  requireVideoAccess,
+  videoCapabilities,
+  type Viewer,
+} from "@/lib/access";
+import { recordLinkEvent } from "@/lib/link-activity";
+import type { Video } from "@/lib/videos";
+import {
+  carryOpenComments,
   deleteComment,
   deleteReply,
   getComment,
@@ -16,7 +26,8 @@ import {
   updateCommentBody,
 } from "@/lib/comments";
 import { notifyComments, notifyFolderChanged } from "@/lib/live";
-import { sendWebhook } from "@/lib/webhook";
+import { notifyNote } from "@/lib/notify";
+import { listVersions } from "@/lib/videos";
 import { formatClock } from "@/lib/timecode";
 import { sanitizeAnnotation, serializeAnnotation } from "@/lib/annotation";
 import type { ActionResult } from "./folders";
@@ -48,7 +59,23 @@ export type NewComment = {
   body: string;
   /** Formes dessinées, telles que produites par le navigateur. */
   annotation?: unknown;
+  /** Note interne au studio. Ignoré si l'auteur est un invité. */
+  internal?: boolean;
 };
+
+/** Un invité qui commente : on le note sur le lien par lequel il est entré. */
+function logGuestComment(viewer: Viewer, video: Video) {
+  if (!isGuest(viewer)) return;
+  recordLinkEvent(videoCapabilities(viewer, video).linkIds, "commented", viewer.name, video.id);
+}
+
+/**
+ * Une note interne n'existe pas pour un invité : ni à lire, ni à modifier en
+ * devinant son identifiant. Même réponse que pour une note supprimée.
+ */
+const hiddenFrom = (viewer: Viewer, comment: { internal: boolean }) =>
+  comment.internal && isGuest(viewer);
+const GONE = { ok: false as const, error: "Ce commentaire n'existe plus." };
 
 /**
  * La création rend l'identifiant de la note : l'interface doit pouvoir la
@@ -99,15 +126,23 @@ export async function createCommentAction(
     timecodeEnd,
     annotation,
     body: checked.body,
+    // Seul le studio écrit en interne : pour un invité, le drapeau venu du
+    // navigateur est ignoré, sa note serait invisible à lui-même.
+    internal: input.internal === true && !isGuest(access.viewer),
   });
   changed(input.videoId);
-  sendWebhook({
-    type: "note",
-    video,
-    author: user.name,
-    summary: `${user.name} a posé une note sur « ${video.name} » à ${formatClock(timecode)}`,
-    body: checked.body,
-  });
+  logGuestComment(access.viewer, video);
+  notifyNote(
+    {
+      type: "note",
+      video,
+      author: user.name,
+      summary: `${user.name} a posé une note sur « ${video.name} » à ${formatClock(timecode)}`,
+      body: checked.body,
+    },
+    user.id,
+    created.internal,
+  );
   return { ok: true, id: created.id };
 }
 
@@ -119,7 +154,9 @@ export async function updateCommentAction(
 
   const comment = getComment(id);
   if (!comment) return { ok: false, error: "Ce commentaire n'existe plus." };
-  if (!(await requireVideoAccess(comment.videoId))) return FORBIDDEN;
+  const seen = await requireVideoAccess(comment.videoId);
+  if (!seen) return FORBIDDEN;
+  if (hiddenFrom(seen.viewer, comment)) return GONE;
   // On ne modifie que ses propres notes : réécrire celle d'un autre
   // fausserait la review.
   if (comment.userId !== user.id)
@@ -159,7 +196,9 @@ export async function toggleCommentResolvedAction(
 
   const comment = getComment(id);
   if (!comment) return { ok: false, error: "Ce commentaire n'existe plus." };
-  if (!(await requireVideoAccess(comment.videoId))) return FORBIDDEN;
+  const seen = await requireVideoAccess(comment.videoId);
+  if (!seen) return FORBIDDEN;
+  if (hiddenFrom(seen.viewer, comment)) return GONE;
 
   setCommentResolved(id, resolved);
   changed(comment.videoId);
@@ -183,19 +222,25 @@ export async function createReplyAction(
   if (!comment) return { ok: false, error: "Ce commentaire n'existe plus." };
   const access = await requireVideoAccess(comment.videoId);
   if (!access) return FORBIDDEN;
+  if (hiddenFrom(access.viewer, comment)) return GONE;
 
   const checked = validateBody(rawBody);
   if ("error" in checked) return { ok: false, error: checked.error };
 
   insertReply({ commentId, userId: user.id, body: checked.body });
   changed(comment.videoId);
-  sendWebhook({
-    type: "reponse",
-    video: access.video,
-    author: user.name,
-    summary: `${user.name} a répondu sur « ${access.video.name} » à ${formatClock(comment.timecode)}`,
-    body: checked.body,
-  });
+  notifyNote(
+    {
+      type: "reponse",
+      video: access.video,
+      author: user.name,
+      summary: `${user.name} a répondu sur « ${access.video.name} » à ${formatClock(comment.timecode)}`,
+      body: checked.body,
+    },
+    user.id,
+    comment.internal,
+  );
+  logGuestComment(access.viewer, access.video);
   return { ok: true };
 }
 
@@ -212,4 +257,24 @@ export async function deleteReplyAction(id: string): Promise<ActionResult> {
   deleteReply(id);
   changed(parent.videoId);
   return { ok: true };
+}
+
+/**
+ * Reporte sur cette version les notes ouvertes de la précédente. Geste du
+ * studio : c'est lui qui juge, version en main, ce qui reste à faire.
+ */
+export async function carryNotesAction(
+  videoId: string,
+): Promise<{ ok: true; carried: number } | { ok: false; error: string }> {
+  if (!(await requireStaff())) return FORBIDDEN;
+  const access = await requireVideoAccess(videoId);
+  if (!access) return { ok: false, error: "Cette vidéo n'existe plus." };
+
+  const versions = listVersions(access.video);
+  const previous = versions.filter((v) => v.version < access.video.version).pop();
+  if (!previous) return { ok: false, error: "Il n'y a pas de version précédente." };
+
+  const carried = carryOpenComments(previous.id, videoId, access.video.duration);
+  changed(videoId);
+  return { ok: true, carried };
 }

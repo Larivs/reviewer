@@ -38,6 +38,12 @@ type Props = {
   currentUserId: string;
   /** Rang de couleur du compte connecté, voir `lib/user-colors`. */
   currentUserColor: number;
+  /** Noms proposés après un `@` dans le formulaire de note. */
+  people: string[];
+  /** Le studio peut écrire des notes internes, cachées aux invités. */
+  canInternal: boolean;
+  /** Texte du filigrane, ou `null` s'il n'y en a pas pour ce spectateur. */
+  watermark: string | null;
 };
 
 export function ReviewWorkspace({
@@ -47,6 +53,9 @@ export function ReviewWorkspace({
   comments: fromServer,
   currentUserId,
   currentUserColor,
+  people,
+  canInternal,
+  watermark,
 }: Props) {
   // Les notes de Jérôme arrivent sans recharger la page. Le rendu serveur
   // fournit l'état de départ, le sondage prend le relais ensuite.
@@ -175,12 +184,12 @@ export function ReviewWorkspace({
 
   const markers = useMemo<Marker[]>(
     () =>
-      comments.map((comment, i) => ({
+      comments.map((comment) => ({
         id: comment.id,
         time: comment.timecode,
         end: comment.timecodeEnd ?? undefined,
-        index: i + 1,
-        label: `#${i + 1} · ${comment.authorName} : ${comment.body.slice(0, 80)}`,
+        index: comment.number,
+        label: `#${comment.number} · ${comment.authorName} : ${comment.body.slice(0, 80)}`,
         resolved: comment.resolved,
         color: userColor(comment.authorColor).hex,
       })),
@@ -208,6 +217,7 @@ export function ReviewWorkspace({
           rangeArmed={rangeArmed}
           onRangeChange={setRange}
           onRangeDone={() => setRangeArmed(false)}
+          watermark={watermark}
         />
         <ShortcutsHelp />
       </div>
@@ -218,6 +228,8 @@ export function ReviewWorkspace({
         comments={comments}
         currentUserId={currentUserId}
         viewers={viewers}
+        people={people}
+        canInternal={canInternal}
         currentTime={displayTime}
         activeId={activeId}
         getPreciseTime={getPreciseTime}

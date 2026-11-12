@@ -1,4 +1,4 @@
-import { readVideoOr404 } from "@/lib/access";
+import { isGuest, readVideoOr404 } from "@/lib/access";
 import { listComments } from "@/lib/comments";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function GET(
   const access = await readVideoOr404(id);
   if (access instanceof Response) return access;
 
-  return Response.json(listComments(id), {
+  return Response.json(listComments(id, { includeInternal: !isGuest(access.viewer) }), {
     // Jamais de cache : c'est exactement la fraîcheur qu'on vient chercher.
     headers: { "Cache-Control": "no-store" },
   });

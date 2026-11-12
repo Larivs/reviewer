@@ -178,7 +178,7 @@ export function CompareView({ a, b }: { a: CompareSide; b: CompareSide }) {
           ).map(([side, ref]) => (
             <div key={side.id} className="relative bg-black">
               <video ref={ref} src={src(side.id)} preload="metadata" playsInline onClick={toggle} className={`${picture} cursor-pointer`} />
-              <span className="tc-plate absolute left-2 top-2 !px-1.5 !py-0.5 text-[11px] text-fg-dim">
+              <span className="tc-plate absolute left-2 top-2 !px-1.5 !py-0.5 text-xs text-fg-dim">
                 {side.label}
               </span>
             </div>
@@ -206,8 +206,8 @@ export function CompareView({ a, b }: { a: CompareSide; b: CompareSide }) {
             style={{ clipPath: `inset(0 0 0 ${split * 100}%)` }}
           />
           <span aria-hidden className="pointer-events-none absolute inset-y-0 w-px bg-fg shadow-[0_0_6px_rgba(0,0,0,0.9)]" style={{ left: `${split * 100}%` }} />
-          <span className="tc-plate pointer-events-none absolute left-2 top-2 !px-1.5 !py-0.5 text-[11px] text-fg-dim">{a.label}</span>
-          <span className="tc-plate pointer-events-none absolute right-2 top-2 !px-1.5 !py-0.5 text-[11px] text-fg-dim">{b.label}</span>
+          <span className="tc-plate pointer-events-none absolute left-2 top-2 !px-1.5 !py-0.5 text-xs text-fg-dim">{a.label}</span>
+          <span className="tc-plate pointer-events-none absolute right-2 top-2 !px-1.5 !py-0.5 text-xs text-fg-dim">{b.label}</span>
         </div>
       )}
 
@@ -290,7 +290,7 @@ function Segmented<T extends string>({
             type="button"
             aria-pressed={value === key}
             onClick={() => onChange(key)}
-            className={`px-2 py-1 text-[11px] transition-colors ${
+            className={`px-2 py-1 text-xs transition-colors ${
               value === key ? "bg-accent/15 text-accent" : "text-muted hover:bg-surface-2 hover:text-fg"
             }`}
           >

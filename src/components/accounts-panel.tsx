@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   countAccountNotesAction,
   createAccountAction,
+  setAccountEmailAction,
   deleteAccountAction,
   resetAccountPasswordAction,
   setAccountGrantsAction,
@@ -329,7 +330,7 @@ function AccountRow({
           onChange={(e) => run(() => setAccountRoleAction(account.id, e.target.value))}
           aria-label={`Rôle de ${account.name}`}
           title={isMe ? "On ne change pas son propre rôle" : ROLE_HELP[account.role]}
-          className="rounded-sm border border-line bg-surface-3 px-1.5 py-1 text-[11px] text-fg-dim disabled:opacity-45"
+          className="rounded-sm border border-line bg-surface-3 px-1.5 py-1 text-xs text-fg-dim disabled:opacity-45"
         >
           {(Object.keys(ROLE_LABELS) as UserRole[]).map((r) => (
             <option key={r} value={r}>
@@ -363,6 +364,24 @@ function AccountRow({
             {editing ? "Fermer" : "Projets"}
           </button>
         )}
+
+        <button
+          type="button"
+          disabled={pending}
+          title={account.email ?? "Aucune adresse : ce compte n'est pas prévenu par courriel"}
+          onClick={() => {
+            // `prompt` : une adresse, une ligne. Un panneau de plus dans une
+            // rangée qui en a déjà trois n'apporterait que de la hauteur.
+            const next = window.prompt(
+              `Courriel de ${account.name}, pour le prévenir des nouvelles notes. Vide pour le retirer.`,
+              account.email ?? "",
+            );
+            if (next !== null) run(() => setAccountEmailAction(account.id, next));
+          }}
+          className={`card-action shrink-0 ${account.email ? "!text-accent" : ""}`}
+        >
+          {account.email ? "Courriel ✓" : "Courriel"}
+        </button>
 
         <button
           type="button"
@@ -448,14 +467,14 @@ function AccountRow({
             type="button"
             disabled={pending}
             onClick={() => run(() => deleteAccountAction(account.id))}
-            className="btn !bg-status-changes !px-2 !py-0.5 !text-[11px] text-white disabled:opacity-45"
+            className="btn !bg-status-changes !px-2 !py-0.5 !text-xs text-white disabled:opacity-45"
           >
             {pending ? "…" : "Oui"}
           </button>
           <button
             type="button"
             onClick={() => setConfirming(null)}
-            className="btn btn-ghost !px-2 !py-0.5 !text-[11px]"
+            className="btn btn-ghost !px-2 !py-0.5 !text-xs"
           >
             Non
           </button>
@@ -489,7 +508,7 @@ export function AccountsPanel({
       <section>
         <div className="mb-3 flex items-center gap-2.5">
           <h2 className="label !text-fg-dim">Comptes</h2>
-          <span className="rounded-sm bg-surface-2 px-1.5 py-px font-mono text-[10px] tabular-nums text-muted">
+          <span className="rounded-sm bg-surface-2 px-1.5 py-px font-mono text-[11px] tabular-nums text-muted">
             {accounts.length}
           </span>
           <span aria-hidden className="h-px flex-1 bg-line" />

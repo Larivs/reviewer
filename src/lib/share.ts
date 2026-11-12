@@ -11,8 +11,13 @@ import {
   videoGrants,
   videos,
 } from "@/db/schema";
-import { generatePassword } from "./auth";
-import { LINK_DURATIONS, type LinkDuration, type ShareTarget } from "./share-types";
+import { generatePassword, hashPassword } from "./auth";
+import {
+  LINK_DURATIONS,
+  type LinkDuration,
+  type LinkOptions,
+  type ShareTarget,
+} from "./share-types";
 
 // Reexport pour le serveur : les appelants cote serveur n'ont pas a savoir
 // que ces valeurs vivent dans un fichier separe pour le navigateur.
@@ -42,10 +47,11 @@ export type { LinkDuration, ShareTarget };
  */
 const makeToken = generatePassword;
 
-export function createShareLink(
+export async function createShareLink(
   target: ShareTarget,
   duration: LinkDuration,
   createdBy: string,
+  options: LinkOptions = {},
 ) {
   const days = LINK_DURATIONS.find((d) => d.key === duration)?.days ?? null;
 
@@ -55,6 +61,10 @@ export function createShareLink(
     folderId: target.kind === "folder" ? target.id : null,
     videoId: target.kind === "video" ? target.id : null,
     expiresAt: days === null ? null : Date.now() + days * 24 * 60 * 60 * 1000,
+    // Haché comme un mot de passe de compte : la base ne le connaît pas.
+    passwordHash: options.password ? await hashPassword(options.password) : null,
+    allowDownload: options.allowDownload === true,
+    watermark: options.watermark === true,
     createdBy,
     createdAt: Date.now(),
   };

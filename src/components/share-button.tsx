@@ -23,6 +23,9 @@ export function ShareButton({
 }) {
   const [open, setOpen] = useState(false);
   const [duration, setDuration] = useState<LinkDuration>("30");
+  const [password, setPassword] = useState("");
+  const [allowDownload, setAllowDownload] = useState(false);
+  const [watermark, setWatermark] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +33,11 @@ export function ShareButton({
 
   function create() {
     startTransition(async () => {
-      const result = await createShareLinkAction(target, duration);
+      const result = await createShareLinkAction(target, duration, {
+        password,
+        allowDownload,
+        watermark,
+      });
       if (result.ok) {
         // L'origine vient du navigateur : c'est la seule façon d'obtenir
         // l'adresse par laquelle on accède réellement au serveur, nom de
@@ -88,6 +95,40 @@ export function ShareButton({
                 </select>
               </div>
 
+              {/* Trois réglages, tous facultatifs. Le geste courant reste
+                  trois clics : rien à remplir ici pour un lien ordinaire. */}
+              <div className="mt-3">
+                <label htmlFor="mdp-lien" className="label block">
+                  Mot de passe, facultatif
+                </label>
+                <input
+                  id="mdp-lien"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="off"
+                  placeholder="Aucun"
+                  className="field mt-1.5 !py-1.5 !text-[13px]"
+                />
+              </div>
+              <label className="mt-3 flex items-start gap-2 text-xs text-fg-dim">
+                <input
+                  type="checkbox"
+                  checked={allowDownload}
+                  onChange={(e) => setAllowDownload(e.target.checked)}
+                  className="mt-0.5 accent-[var(--color-accent)]"
+                />
+                Autoriser le téléchargement du fichier d&apos;origine
+              </label>
+              <label className="mt-2 flex items-start gap-2 text-xs text-fg-dim">
+                <input
+                  type="checkbox"
+                  checked={watermark}
+                  onChange={(e) => setWatermark(e.target.checked)}
+                  className="mt-0.5 accent-[var(--color-accent)]"
+                />
+                Afficher le nom du visiteur en filigrane sur l&apos;image
+              </label>
+
               {error && (
                 <p role="alert" className="mt-2 text-xs text-status-changes">
                   {error}
@@ -114,7 +155,7 @@ export function ShareButton({
             </>
           ) : (
             <>
-              <code className="mt-3 block select-all break-all rounded-sm border border-line bg-surface-3 px-2 py-1.5 font-mono text-[11px] text-accent">
+              <code className="mt-3 block select-all break-all rounded-sm border border-line bg-surface-3 px-2 py-1.5 font-mono text-xs text-accent">
                 {link}
               </code>
               <div className="mt-2 flex items-center gap-2">
@@ -149,6 +190,9 @@ export function ShareButton({
                 </button>
               </div>
               <p className="mt-2 text-xs text-muted">
+                {password
+                  ? "Transmets le mot de passe par un autre canal que le lien. "
+                  : ""}
                 Révocable à tout moment depuis la page Comptes.
               </p>
             </>

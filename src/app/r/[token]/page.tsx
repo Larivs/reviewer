@@ -32,7 +32,10 @@ export default async function JoinPage({
   // Déjà dans la place, le studio qui vérifie son propre lien, ou le client
   // qui revient avec son cookie. On ne lui redemande pas son prénom.
   const viewer = await getViewer();
-  if (viewer) {
+  // Un invité déjà connu qui arrive sur un lien protégé doit donner le mot de
+  // passe comme tout le monde : on lui montre le formulaire, prénom acquis.
+  const mustAsk = viewer !== null && isGuest(viewer) && link.passwordHash !== null;
+  if (viewer && !mustAsk) {
     // Un invité déjà entré par un autre lien : sans ce droit, il était
     // renvoyé vers une vidéo qu'il ne pouvait pas voir, donc un 404.
     if (isGuest(viewer)) applyLinkGrant(viewer.id, link);
@@ -51,7 +54,12 @@ export default async function JoinPage({
         Tu peux regarder, commenter à l&apos;image près et répondre aux autres.
       </p>
       <div className="mt-6">
-        <JoinForm token={token} target={target} />
+        <JoinForm
+          token={token}
+          target={target}
+          needsPassword={link.passwordHash !== null}
+          knownName={viewer?.name ?? null}
+        />
       </div>
     </Shell>
   );

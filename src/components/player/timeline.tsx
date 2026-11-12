@@ -17,11 +17,11 @@ const TICK_SPACING = 84;
 const TICK_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
 
 /** Hauteur d'une rangée de repères, marge comprise. */
-const LANE_HEIGHT = 8;
+const LANE_HEIGHT = 22;
 /** Au-delà, on empilerait plus haut que le lecteur ne le supporte. */
 const MAX_LANES = 3;
 /** Encombrement minimal d'un repère ponctuel, en pixels. */
-const MARKER_FOOTPRINT = 11;
+const MARKER_FOOTPRINT = 22;
 /**
  * Rayon d'aimantation autour d'un repère, en pixels. Sept pixels, c'est à
  * peu près la précision d'une main à la souris : en dessous on rate la
@@ -120,6 +120,10 @@ type Props = {
   onRangeChange?: (range: Range | null) => void;
   /** Un glissement vient d'aboutir : le formulaire peut se désarmer. */
   onRangeDone?: () => void;
+  /** Clic sur le repère d'une note. Par défaut, un simple déplacement. */
+  onMarkerSeek?: (time: number) => void;
+  /** Points d'entrée et de sortie de la boucle, posés avec I et O. */
+  loop?: { in: number | null; out: number | null };
 };
 
 export function Timeline({
@@ -135,6 +139,8 @@ export function Timeline({
   rangeArmed = false,
   onRangeChange,
   onRangeDone,
+  onMarkerSeek,
+  loop,
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
@@ -410,7 +416,7 @@ export function Timeline({
           {ticks.map((time) => (
             <span
               key={time}
-              className="absolute bottom-0 flex h-full items-end border-l border-line-strong pl-1 font-mono text-[9.5px] leading-none tabular-nums text-muted"
+              className="absolute bottom-0 flex h-full items-end border-l border-line-strong pl-1 font-mono text-[10.5px] leading-none tabular-nums text-muted"
               style={{ left: `${pct(time)}%` }}
             >
               <span className="pb-1">{formatClock(time)}</span>
@@ -489,6 +495,45 @@ export function Timeline({
             />
           )}
 
+          {/* Chaque note marque la bande, à la couleur de son auteur : un
+              trait à son image, et pour une plage un bandeau sur sa durée.
+              Sous la piste on lit *quelle* note ; ici on voit d'abord *où*
+              il y a quelque chose à reprendre, sans quitter l'image des
+              yeux. Une note résolue s'efface presque. */}
+          {markers.map((marker) => {
+            const teinte = marker.color ?? "var(--color-accent)";
+            return (
+              <div
+                key={`trait-${marker.id}`}
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0"
+                style={{
+                  left: `${pct(marker.time)}%`,
+                  width:
+                    marker.end !== undefined ? `${pct(marker.end - marker.time)}%` : undefined,
+                  opacity: marker.resolved ? 0.3 : 1,
+                }}
+              >
+                {marker.end !== undefined && (
+                  <span
+                    className="absolute inset-0"
+                    style={{ background: `color-mix(in srgb, ${teinte} 26%, transparent)` }}
+                  />
+                )}
+                <span
+                  className="absolute inset-y-0 left-0 w-[3px] -translate-x-1/2 shadow-[0_0_0_1px_rgba(0,0,0,0.75)]"
+                  style={{ background: teinte }}
+                />
+                {marker.end !== undefined && (
+                  <span
+                    className="absolute inset-y-0 right-0 w-[3px] translate-x-1/2 shadow-[0_0_0_1px_rgba(0,0,0,0.75)]"
+                    style={{ background: teinte }}
+                  />
+                )}
+              </div>
+            );
+          })}
+
           {/* Portions déjà téléchargées : montre ce qui est prêt à jouer. */}
           {buffered.map(([start, end], i) => (
             <div
@@ -505,6 +550,31 @@ export function Timeline({
             className={`neon-soft absolute left-0 bg-accent ${strip ? "bottom-0 h-0.5" : "inset-y-0"}`}
             style={{ width: `${pct(currentTime)}%` }}
           />
+
+          {/* Boucle : un liseré clair en tête de piste entre l'entrée et la
+              sortie, deux butées aux extrémités. Clair et non à l'accent :
+              l'accent est pris par la lecture et par la plage d'une note. */}
+          {loop && loop.in !== null && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 border-l-2 border-fg"
+              style={{ left: `${pct(loop.in)}%` }}
+            />
+          )}
+          {loop && loop.out !== null && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 border-r-2 border-fg"
+              style={{ left: 0, width: `${pct(loop.out)}%` }}
+            />
+          )}
+          {loop && loop.in !== null && loop.out !== null && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute top-0 h-[3px] bg-fg"
+              style={{ left: `${pct(loop.in)}%`, width: `${pct(loop.out - loop.in)}%` }}
+            />
+          )}
 
           {/* Plage en cours de composition. Elle déborde la piste en hauteur
               pour rester lisible par-dessus la portion déjà lue, qui est de
@@ -592,89 +662,45 @@ export function Timeline({
         className="pointer-events-none relative"
         style={{ height: laneCount * LANE_HEIGHT + 6 }}
       >
-        {/* Les plages d'abord, les points ensuite : à rangée égale, un
-            point reste visible par-dessus une barre. */}
-        {placed
-          .filter((item) => item.marker.end !== undefined)
-          .map(({ marker, lane }) => {
-            // La teinte dit *qui*, jamais *où en est* la note : une note
-            // résolue garde la couleur de son auteur et recule en opacité.
-            // Colorer le résolu en vert ferait deux messages dans un objet
-            // de sept pixels, et on ne lirait plus ni l'un ni l'autre.
-            const teinte = marker.color ?? "var(--color-accent)";
-            return (
-              <button
-                key={marker.id}
-                type="button"
-                onClick={() => onSeek(marker.time)}
-                title={marker.label}
-                aria-label={`Aller à la note ${marker.index ?? ""}, de ${formatClock(marker.time)} à ${formatClock(marker.end!)}`}
-                className={`pointer-events-auto absolute min-w-[5px] transition-all hover:!opacity-100 ${
-                  marker.id === activeMarkerId ? "-mt-px h-[9px]" : "h-[7px]"
-                }`}
-                style={{
-                  top: lane * LANE_HEIGHT + 1,
-                  left: `${pct(marker.time)}%`,
-                  width: `${Math.max(pct(marker.end! - marker.time), 0.4)}%`,
-                  opacity: marker.resolved ? 0.4 : 1,
-                }}
-              >
-                {/* Zone de clic élargie, invisible : le repère ne fait que
-                    quelques pixels, on ne vise pas ça à la souris. Elle
-                    déborde surtout horizontalement, verticalement les
-                    rangées ne sont espacées que de 8 px. */}
-                <span aria-hidden className="absolute -inset-x-1 -inset-y-1" />
-                {/* Crochet entrée/sortie : montants pleins aux deux bouts,
-                    trait mince entre les deux. La forme suffit à distinguer
-                    une plage d'une note ponctuelle. */}
-                <span
-                  aria-hidden
-                  className={`absolute inset-x-0 top-[3px] h-[1.5px] rounded-full ${
-                    marker.id === activeMarkerId ? "opacity-100" : "opacity-60"
-                  }`}
-                  style={{ background: teinte }}
-                />
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-0 h-full w-[2px] rounded-[1px]"
-                  style={{ background: teinte }}
-                />
-                <span
-                  aria-hidden
-                  className="absolute right-0 top-0 h-full w-[2px] rounded-[1px]"
-                  style={{ background: teinte }}
-                />
-              </button>
-            );
-          })}
-
-        {placed
-          .filter((item) => item.marker.end === undefined)
-          .map(({ marker, lane }) => (
+        {/* Une pastille par note, à son numéro et à la couleur de son
+            auteur. C'étaient des triangles de 8 px : on ne voyait ni où
+            étaient les notes, ni laquelle était laquelle, alors que c'est
+            la liste de ce qu'il reste à faire. Le numéro est celui du
+            panneau, on passe de l'un à l'autre sans chercher. */}
+        {placed.map(({ marker, lane }) => {
+          const teinte = marker.color ?? "var(--color-accent)";
+          const isActive = marker.id === activeMarkerId;
+          const isRange = marker.end !== undefined;
+          return (
             <button
               key={marker.id}
               type="button"
-              onClick={() => onSeek(marker.time)}
+              onClick={() => (onMarkerSeek ?? onSeek)(marker.time)}
               title={marker.label}
-              aria-label={`Aller à la note ${marker.index ?? ""}, ${formatClock(marker.time)}`}
-              className="pointer-events-auto absolute -translate-x-1/2 leading-none hover:!opacity-100"
+              aria-label={
+                isRange
+                  ? `Aller à la note ${marker.index ?? ""}, de ${formatClock(marker.time)} à ${formatClock(marker.end!)}`
+                  : `Aller à la note ${marker.index ?? ""}, ${formatClock(marker.time)}`
+              }
+              className={`pointer-events-auto absolute flex h-[18px] items-center rounded-full text-[11px] font-bold leading-none tabular-nums text-[#07090e] transition-transform hover:z-10 hover:scale-110 hover:!opacity-100 ${
+                isRange ? "justify-start px-[5px]" : "w-[18px] -translate-x-1/2 justify-center"
+              } ${isActive ? "z-10 scale-110 ring-2 ring-fg" : "ring-1 ring-black/70"}`}
               style={{
-                top: lane * LANE_HEIGHT + 1,
+                top: lane * LANE_HEIGHT + 4,
                 left: `${pct(marker.time)}%`,
+                // Une plage s'étire sur sa durée, sans jamais devenir plus
+                // étroite que la pastille d'une note ponctuelle.
+                width: isRange
+                  ? `max(18px, ${pct(marker.end! - marker.time)}%)`
+                  : undefined,
+                background: teinte,
                 opacity: marker.resolved ? 0.4 : 1,
               }}
             >
-              {/* Voir plus haut : le triangle fait 8 × 7 px, la cible réelle
-                  doit être plus large que le dessin. */}
-              <span aria-hidden className="absolute -inset-x-2.5 -inset-y-1" />
-              <span
-                className={`block size-0 border-x-[4.5px] border-b-[7px] border-x-transparent drop-shadow-[0_0_1.5px_rgba(0,0,0,0.9)] transition-transform hover:scale-125 ${
-                  marker.id === activeMarkerId ? "scale-125" : ""
-                }`}
-                style={{ borderBottomColor: marker.color ?? "var(--color-accent)" }}
-              />
+              {marker.index}
             </button>
-          ))}
+          );
+        })}
       </div>
 
       {hover !== null && (
@@ -730,7 +756,7 @@ function Preview({
           }}
         />
       )}
-      <span className="mt-0.5 block rounded-sm border border-line bg-bg px-1.5 py-0.5 text-center font-mono text-[10px] tabular-nums text-fg">
+      <span className="mt-0.5 block rounded-sm border border-line bg-bg px-1.5 py-0.5 text-center font-mono text-[11px] tabular-nums text-fg">
         {formatClock(time)}
       </span>
     </div>

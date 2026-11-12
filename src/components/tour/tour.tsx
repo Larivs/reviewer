@@ -312,7 +312,7 @@ export function Tour({ id, steps }: { id: string; steps: TourStep[] }) {
 
         {step.hint && (
           <p className="mt-2.5">
-            <span className="rounded-sm border border-line bg-surface-3 px-1.5 py-0.5 font-mono text-[11px] text-fg-dim">
+            <span className="rounded-sm border border-line bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-fg-dim">
               {step.hint}
             </span>
           </p>

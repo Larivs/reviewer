@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     "@node-rs/argon2",
     "ffmpeg-static",
     "ffprobe-static",
+    "nodemailer",
   ],
   // Inutile de dire à qui sonde quel serveur répond.
   poweredByHeader: false,

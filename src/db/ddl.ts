@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role          TEXT NOT NULL DEFAULT 'membre',
   invited_via   TEXT,
+  email         TEXT,
   created_at    INTEGER NOT NULL
 );
 
@@ -43,6 +44,9 @@ CREATE TABLE IF NOT EXISTS share_links (
   folder_id  TEXT REFERENCES folders(id) ON DELETE CASCADE,
   video_id   TEXT REFERENCES videos(id) ON DELETE CASCADE,
   expires_at INTEGER,
+  password_hash  TEXT,
+  allow_download INTEGER NOT NULL DEFAULT 0,
+  watermark      INTEGER NOT NULL DEFAULT 0,
   created_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at INTEGER NOT NULL
 );
@@ -72,6 +76,9 @@ CREATE TABLE IF NOT EXISTS videos (
   fps         REAL,
   status      TEXT NOT NULL DEFAULT 'a_review',
   state       TEXT NOT NULL DEFAULT 'ready',
+  kind        TEXT NOT NULL DEFAULT 'video',
+  original    TEXT,
+  original_name TEXT,
   stack_id    TEXT,
   version     INTEGER NOT NULL DEFAULT 1,
   uploaded_by TEXT REFERENCES users(id) ON DELETE SET NULL,
@@ -87,6 +94,7 @@ CREATE TABLE IF NOT EXISTS comments (
   timecode_end  REAL,
   annotation    TEXT,
   body          TEXT NOT NULL,
+  internal   INTEGER NOT NULL DEFAULT 0,
   resolved   INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
@@ -108,4 +116,17 @@ CREATE TABLE IF NOT EXISTS comment_replies (
 );
 CREATE INDEX IF NOT EXISTS comment_replies_comment_idx
   ON comment_replies(comment_id, created_at);
+
+/* Journal d'un lien de partage. Le nom est recopié, pour rester lisible
+   apres la suppression du compte ; les lignes partent avec le lien. */
+CREATE TABLE IF NOT EXISTS share_link_events (
+  id         TEXT PRIMARY KEY,
+  link_id    TEXT NOT NULL REFERENCES share_links(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  video_id   TEXT,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS share_link_events_link_idx
+  ON share_link_events(link_id, created_at);
 `;
