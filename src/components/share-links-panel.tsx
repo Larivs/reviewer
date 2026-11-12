@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "./toast";
 import { deleteShareLinkAction } from "@/actions/share";
 import type { LinkRow } from "@/lib/share";
 import { formatShortDateTime } from "@/lib/format";
@@ -89,7 +90,10 @@ function LinkRowItem({ link }: { link: LinkRow }) {
             // dire. On montre alors l'adresse, à copier à la main.
             const fallback = () => window.prompt("Copie ce lien :", url);
             if (!navigator.clipboard) return void fallback();
-            navigator.clipboard.writeText(url).then(() => setCopied(true), fallback);
+            navigator.clipboard.writeText(url).then(() => {
+              setCopied(true);
+              toast("Lien copié");
+            }, fallback);
           }}
           className="card-action ml-auto shrink-0"
         >

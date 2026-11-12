@@ -6,6 +6,8 @@ import type { Annotation } from "@/lib/annotation";
 import { userColor } from "@/lib/user-colors";
 import type { Tool } from "../annotation/annotation-layer";
 import type { Range } from "../player/timeline";
+import type { Viewer } from "./use-live-comments";
+import { UserChip } from "../user-chip";
 import { CommentForm } from "./comment-form";
 import { CommentItem } from "./comment-item";
 
@@ -23,6 +25,8 @@ type Props = {
   fps: number | null;
   comments: CommentWithAuthor[];
   currentUserId: string;
+  /** Qui a la vidéo ouverte en ce moment, soi compris. */
+  viewers: Viewer[];
   currentTime: number;
   /** Note sous la tête de lecture, calculée par l'espace de review. */
   activeId: string | null;
@@ -47,6 +51,7 @@ export function CommentsPanel({
   fps,
   comments,
   currentUserId,
+  viewers,
   currentTime,
   activeId,
   getPreciseTime,
@@ -162,7 +167,51 @@ export function CommentsPanel({
             </span>
           )}
         </h2>
+
+        {/* Qui regarde en même temps. Soi-même n'y figure pas : on sait
+            qu'on est là, et une pastille permanente n'apprendrait rien. */}
+        {viewers.some((v) => v.id !== currentUserId) && (
+          <div
+            className="flex items-center gap-1"
+            title={`En ce moment : ${viewers
+              .filter((v) => v.id !== currentUserId)
+              .map((v) => v.name)
+              .join(", ")}`}
+          >
+            <span aria-hidden className="size-1.5 rounded-full bg-status-done" />
+            {viewers
+              .filter((v) => v.id !== currentUserId)
+              .map((v) => (
+                <UserChip key={v.id} name={v.name} colorIndex={v.color} />
+              ))}
+          </div>
+        )}
       </div>
+
+      {/* Sortir les notes vers le montage. Trois liens et pas un menu : ce
+          sont trois fichiers, on les voit tous d'un coup d'œil. */}
+      {comments.length > 0 && (
+        <p className="meta mt-1.5 flex flex-wrap items-center gap-x-2">
+          Exporter
+          {(
+            [
+              ["edl", "Resolve", "Marqueurs de timeline pour DaVinci Resolve (EDL)"],
+              ["csv", "CSV", "Tableau, s'ouvre dans Excel"],
+              ["txt", "Texte", "À coller dans un message ou à imprimer"],
+            ] as const
+          ).map(([format, label, title]) => (
+            <a
+              key={format}
+              href={`/api/videos/${videoId}/export?format=${format}`}
+              download
+              title={title}
+              className="card-action underline-offset-2 hover:underline"
+            >
+              {label}
+            </a>
+          ))}
+        </p>
+      )}
 
       <div className="mt-3">
         <CommentForm

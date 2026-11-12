@@ -28,14 +28,25 @@ aucun contenu client.</sub>
   timecode de la note, à la couleur de leur auteur.
 - **Fils de discussion.** On répond sous la note d'un autre au lieu d'en
   écrire une seconde au même endroit.
+- **Versions.** v1, v2, v3 d'un même montage sur une seule vignette, chacune
+  avec ses notes, et une comparaison synchronisée, côte à côte ou en volet.
+- **Export des notes.** En marqueurs pour DaVinci Resolve (EDL), en CSV, ou en
+  texte à coller dans un message.
+- **En direct.** Les notes des autres arrivent sans recharger, et on voit qui
+  regarde la vidéo en même temps.
 - **Trois rôles.** Admin, membre, invité. Un invité ne voit que les projets
   qu'on lui ouvre.
 - **Liens de review.** Un lien par vidéo ou par projet, avec expiration, à
   envoyer par le canal de son choix.
 - **Lecteur d'outil vidéo.** Avance image par image, timecode `HH:MM:SS:FF`,
   zoom, aperçu au survol de la piste, raccourcis clavier.
-- **Refus des formats illisibles** à l'envoi, avec le message qui dit quoi
-  réexporter, plutôt qu'une vidéo noire découverte trois jours plus tard.
+- **ProRes, DNxHD, HEVC acceptés** : ce que le navigateur ne lit pas est
+  converti en H.264 à l'arrivée, au lieu d'une vidéo noire découverte trois
+  jours plus tard.
+- **Envoi qui reprend.** Une coupure ne fait plus recommencer un rush : l'envoi
+  repart d'où il s'était arrêté.
+- **Recherche.** Ctrl + K, trois lettres, Entrée : n'importe quel projet ou
+  montage, depuis n'importe quelle page.
 
 ## En images
 
@@ -171,8 +182,13 @@ publique, le cas dès qu'on envoie des liens de review à des clients qui ne
 sont pas sur le VPN. Le cookie de session passe alors automatiquement en
 `secure` : l'app détecte `x-forwarded-proto`, il n'y a rien à régler.
 
-> **Cloudflare Tunnel plafonne chaque requête à 100 Mo.** Un rush de 2 Go ne
-> passera jamais, puisque l'envoi part en une seule requête. À écarter.
+> Un flux d'événements (`/api/events`) pousse les changements en direct.
+> Derrière nginx, il lui faut `proxy_buffering off` sur cette route, sinon les
+> notes des autres n'arrivent qu'au retour sur l'onglet. Caddy et Traefik ne
+> demandent rien.
+
+L'envoi part par tranches de 32 Mo : il passe donc aussi par les tunnels qui
+plafonnent la taille d'une requête, Cloudflare Tunnel et ses 100 Mo compris.
 
 **Ne jamais ouvrir le port 3000 directement sur Internet** : l'app parle HTTP,
 le mot de passe circulerait en clair.
@@ -258,18 +274,23 @@ autre époque le corromprait, puis recopier les média depuis le miroir.
 ## Formats vidéo
 
 Le navigateur ne lit que certains codecs. À l'envoi, le fichier est analysé
-par ffprobe et **refusé s'il n'est pas lisible**, avec un message qui dit quoi
-réexporter, plutôt que d'accepter une vidéo qui resterait noire à la lecture.
+par ffprobe, sur son **contenu** et pas sur son extension : un `.mp4` qui
+contient du ProRes est reconnu pour ce qu'il est.
 
-Accepté : conteneur MP4/MOV/WebM, vidéo en H.264, VP8, VP9 ou AV1, audio en
-AAC, MP3, Opus, Vorbis ou FLAC. HEVC est volontairement exclu : son support
-dépend de l'OS et du navigateur.
+Lu tel quel : conteneur MP4/MOV/WebM, vidéo en H.264, VP8, VP9 ou AV1, audio
+en AAC, MP3, Opus, Vorbis ou FLAC.
 
-Refusé, donc : ProRes, DNxHD, MPEG-2, audio PCM ou AC-3. C'est l'export H.264
-qu'on fait de toute façon pour un proxy de review.
+Tout le reste (ProRes, DNxHD, HEVC, MPEG-2, audio PCM ou AC-3) est **converti
+en H.264 / AAC** après l'envoi. La vidéo apparaît tout de suite, marquée « en
+conversion », et s'ouvre d'elle-même quand la copie est prête. Deux choses à
+savoir :
 
-L'analyse porte sur le **contenu**, pas sur l'extension : un `.mp4` contenant
-du ProRes est détecté et refusé.
+- c'est un **proxy de review**, pas un master : l'original n'est pas conservé
+  une fois la copie produite ;
+- la conversion occupe le processeur de la machine hôte, une vidéo à la fois.
+  Un long métrage en ProRes prend plusieurs minutes.
+
+Un fichier sans piste vidéo, ou illisible, reste refusé.
 
 ### Note Windows
 
@@ -287,11 +308,14 @@ Autant les dire ici plutôt que les faire découvrir :
   règlent (voir `.env.example`).
 - **Un seul espace par instance.** Pas de multi-tenant : chaque studio fait
   tourner la sienne. C'est un choix, pas un manque.
-- **Pas de reprise d'envoi.** Une coupure pendant le dépôt d'un rush oblige à
-  le refaire.
-- **Pas de transcodage.** L'app refuse ce que le navigateur ne sait pas lire,
-  elle ne le convertit pas.
-- **Pas de notification.** Ni courriel, ni webhook : on prévient les gens soi-même.
+- **Les notes ne suivent pas d'une version à l'autre.** Chaque version a les
+  siennes, c'est voulu ; il n'y a pas de report automatique.
+- **On ne supprime pas une version seule.** La corbeille de la vignette
+  emporte toute la pile.
+- **Notifications par webhook seulement** (`REVIEWER_WEBHOOK_URL`, Slack ou
+  Discord). Pas de courriel.
+- **L'export EDL vise DaVinci Resolve.** Premiere n'importe pas de marqueurs
+  sans extension tierce ; le CSV est là pour ça.
 - **Testé sur Windows et Chrome.** Le reste devrait marcher, mais n'est pas
   éprouvé au quotidien.
 

@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS videos (
   duration    REAL,
   fps         REAL,
   status      TEXT NOT NULL DEFAULT 'a_review',
+  state       TEXT NOT NULL DEFAULT 'ready',
+  stack_id    TEXT,
+  version     INTEGER NOT NULL DEFAULT 1,
   uploaded_by TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at  INTEGER NOT NULL
 );

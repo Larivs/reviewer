@@ -100,24 +100,72 @@ dans un `Referer`.
 ## Upload et lecture
 
 Le fichier s'écrit sous un nom en `.part`, renommé une fois validé par
-ffprobe : un arrêt du serveur en plein envoi laisse un reste reconnaissable,
-que `npm run serve` retire au démarrage. La planche d'aperçu se fabrique
+ffprobe : un envoi interrompu laisse un reste reconnaissable, gardé une
+semaine pour pouvoir reprendre, puis retiré par `npm run serve` au démarrage.
+La planche d'aperçu se fabrique
 **après** la réponse, une à la fois : elle décode tout le métrage, et
 l'attendre gardait la barre d'envoi figée à 100 % pendant des minutes. La
 piste la redemande quelques fois tant qu'elle n'est pas prête.
 
-L'envoi se fait en corps de requête brut, écrit sur le disque au fil de l'eau :
-un fichier de plusieurs gigaoctets ne passe jamais entièrement en mémoire.
-Plafond à 25 Go, vérifié en comptant les octets reçus et pas seulement d'après
-l'en-tête `Content-Length`. Les fichiers partent un par un, deux envois
-simultanés se partagent la même bande passante et finissent tous les deux plus
-tard.
+L'envoi se fait par **tranches de 32 Mo**, chacune en corps de requête brut
+ajouté au fil de l'eau à un fichier `.part` : un rush de plusieurs gigaoctets
+ne passe jamais en mémoire. Le `.part` est nommé d'après le compte et une
+empreinte du fichier (nom, taille, date), ce qui permet la reprise : le
+navigateur demande au serveur combien d'octets il a, et repart de là. Une
+tranche doit commencer exactement à cette position, sinon le serveur répond
+409 avec la bonne plutôt que d'écrire au mauvais endroit. Plafond à 25 Go,
+vérifié en comptant les octets reçus. Les fichiers partent un par un, deux
+envois simultanés se partagent la même bande passante et finissent tous les
+deux plus tard.
+
+Un format que le navigateur ne lit pas est converti en H.264 après la
+réponse, dans la même file que les planches d'aperçu, un travail ffmpeg à la
+fois. La ligne existe tout de suite avec `state = processing`. Une conversion
+ne survit pas à un arrêt du serveur : au démarrage, ce qui était en cours
+passe en `failed`, mieux vaut le dire que laisser tourner un sablier.
 
 La lecture passe par une route qui gère les requêtes `Range` (206 Partial
 Content). C'est ce qui rend le déplacement dans la vidéo instantané, et c'est
 la base sur laquelle reposent les commentaires au timecode.
 
-Pas de reprise après interruption : en cas de coupure, l'envoi est à refaire.
+
+## Versions
+
+Une version est **une vidéo à part entière**, liée aux autres par `stack_id`
+(l'id de la première) et numérotée par `version`. Pas de table de piles :
+`stack_id` reste vide tant qu'un montage n'a qu'une version, donc rien ne
+change pour les vidéos qui n'en auront jamais.
+
+Les notes restent sur leur version et ne sont pas reportées. Une note « le
+logo arrive trop tôt » posée sur la v1 n'a pas à réapparaître sur la v2, où
+le logo a justement été déplacé ; la reporter obligerait quelqu'un à la
+refermer à la main sur chaque version.
+
+La grille ne montre que la dernière version de chaque pile, renommer et ranger
+s'appliquent à toute la pile, et un lien de partage vers une vidéo ouvre
+**toutes ses versions**, y compris celles déposées après l'envoi du lien :
+c'est pour les montrer au client qu'on les dépose.
+
+La comparaison joue deux lecteurs sur une seule horloge. La gauche mène, la
+droite est recalée dès qu'elle s'écarte de plus de 60 ms : deux lecteurs
+lancés ensemble ne restent pas ensemble, chacun tamponne à son rythme. Le
+**volet** superpose les deux images avec une séparation qu'on déplace, c'est
+lui qui montre au pixel ce qui a bougé sur un raccord.
+
+## Le direct
+
+Un flux d'événements (SSE, `/api/events`) prévient les navigateurs qu'une
+chose a changé. **Il ne transporte aucune donnée de review**, seulement le
+signal : le navigateur relit ensuite par les routes habituelles, qui
+appliquent les droits. Un flux resté ouvert après la mort d'un lien n'apprend
+donc rien à son porteur.
+
+Tout tient dans le processus (`lib/live.ts`), un émetteur d'événements et une
+table des connexions ouvertes pour la présence. Une instance, c'est un serveur
+Node : il n'y a pas de second processus à prévenir, donc ni Redis ni file.
+
+Le sondage de fond est resté. Derrière un proxy qui retient les flux, c'est
+encore lui qui rattrape au retour sur l'onglet.
 
 ## Le lecteur
 

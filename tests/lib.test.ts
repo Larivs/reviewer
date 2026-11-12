@@ -81,3 +81,48 @@ test("annotation : plafonds", () => {
   const free = sanitizeAnnotation({ shapes: [{ t: "free", pts }] })?.shapes[0];
   assert.equal(free?.t === "free" && free.pts.length, MAX_POINTS);
 });
+
+// ── Export des notes ────────────────────────────────────────────────────
+import { timelineTimecode, toCsv, toEdl, toText } from "../src/lib/export.ts";
+
+const note = (over: object) => ({
+  id: "c", videoId: "v", userId: "u", authorName: "Hugo", authorColor: 0,
+  timecode: 4, timecodeEnd: null, annotation: null, body: "Logo trop tôt",
+  resolved: false, createdAt: 0, replies: [], ...over,
+});
+
+test("export : timecode de timeline, départ à une heure, cadence entière", () => {
+  assert.equal(timelineTimecode(0, 25), "01:00:00:00");
+  assert.equal(timelineTimecode(4, 25), "01:00:04:00");
+  assert.equal(timelineTimecode(61.52, 25), "01:01:01:13");
+  // 23,976 se compte sur 24 : l'image 240 est à dix secondes de timeline.
+  assert.equal(timelineTimecode(240 / 23.976, 23.976), "01:00:10:00");
+  assert.equal(timelineTimecode(1, null), "01:00:01:00");
+});
+
+test("export : EDL, un marqueur par note", () => {
+  const edl = toEdl("Montage v2", [
+    note({}),
+    note({ timecode: 12, timecodeEnd: 18, resolved: true, body: "a | b\nc" }),
+  ], 25);
+  assert.match(edl, /^TITLE: Montage v2\nFCM: NON-DROP FRAME\n/);
+  assert.match(edl, /001  001      V     C        01:00:04:00 01:00:04:01 01:00:04:00 01:00:04:01/);
+  assert.match(edl, / \|C:ResolveColorBlue \|M:Hugo : Logo trop tôt \|D:1/);
+  // Une plage dure son intervalle ; `|` et retours à la ligne sont neutralisés.
+  assert.match(edl, /01:00:12:00 01:00:18:00/);
+  assert.match(edl, / \|C:ResolveColorGreen \|M:Hugo : a \/ b \/ c \|D:150/);
+});
+
+test("export : CSV lisible par Excel, guillemets doublés", () => {
+  const csv = toCsv([note({ body: 'Dit "non"; puis oui', replies: [{ authorName: "Toma", body: "ok" }] })], 25);
+  assert.ok(csv.startsWith("\uFEFF"));
+  const [head, row] = csv.slice(1).split("\r\n");
+  assert.equal(head, '"N°";"Timecode";"Fin";"Auteur";"État";"Note";"Réponses"');
+  assert.equal(row, '"1";"00:00:04:00";"";"Hugo";"Ouverte";"Dit ""non""; puis oui";"Toma : ok"');
+});
+
+test("export : texte", () => {
+  const txt = toText("Montage", [note({ resolved: true, replies: [{ authorName: "Toma", body: "fait" }] })], 25);
+  assert.match(txt, /^Montage\n1 note\(s\), 0 ouverte\(s\)\n/);
+  assert.match(txt, /#1  00:00:04:00  Hugo  \[résolue\]\n    Logo trop tôt\n    ↳ Toma : fait/);
+});

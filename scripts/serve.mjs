@@ -103,14 +103,23 @@ if (builtAt === 0 || changedAt > builtAt) {
   }
 }
 
-// ── Restes d'envois interrompus ───────────────────────────────────────
-// Un envoi s'écrit en `.part` et n'est renommé qu'une fois validé. Le serveur
-// n'est pas encore lancé : tout `.part` présent ici est un envoi coupé par un
-// arrêt, que plus rien ne finira. Plusieurs gigaoctets, parfois.
+// ── Restes d'envois et de conversions ─────────────────────────────────
+// Le serveur n'est pas encore lancé, donc rien de ce qui suit n'est en cours.
+// Une conversion coupée par un arrêt ne reprendra pas : son original
+// (`.source`) et son brouillon (`.tmp`) sont perdus pour de bon. Un envoi
+// interrompu (`.part`), lui, peut reprendre, on le garde une semaine pour
+// qui redépose le même fichier, puis on rend la place.
 const videoDir = path.join(ROOT, "data", "videos");
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 if (existsSync(videoDir))
-  for (const name of readdirSync(videoDir))
-    if (name.endsWith(".part")) rmSync(path.join(videoDir, name), { force: true });
+  for (const name of readdirSync(videoDir)) {
+    const file = path.join(videoDir, name);
+    const stale =
+      name.endsWith(".source") ||
+      name.endsWith(".tmp") ||
+      (name.endsWith(".part") && Date.now() - statSync(file).mtimeMs > WEEK_MS);
+    if (stale) rmSync(file, { force: true });
+  }
 
 // ── 3. Les vraies adresses ────────────────────────────────────────────
 function addresses() {

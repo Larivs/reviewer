@@ -104,6 +104,56 @@ export function playbackProblem(p: Probe): string | null {
   return null;
 }
 
+/**
+ * Convertit en H.264 / AAC ce que le navigateur ne lit pas : ProRes, DNxHD,
+ * HEVC, audio PCM. C'est un proxy de review, pas un master : `veryfast` et
+ * CRF 20 donnent une image propre sans monopoliser la machine qui sert aussi
+ * la lecture aux autres.
+ *
+ * Les dimensions sont ramenées au pair, que libx264 exige en 4:2:0, et
+ * `faststart` place l'index en tête pour que la lecture démarre sans avoir
+ * à télécharger la fin du fichier. Pas de délai maximal : un long métrage en
+ * ProRes prend le temps qu'il prend.
+ */
+export async function transcode(inputPath: string, outputPath: string) {
+  await run(
+    FFMPEG,
+    [
+      "-i", inputPath,
+      "-map", "0:v:0",
+      "-map", "0:a:0?",
+      "-c:v", "libx264",
+      "-preset", "veryfast",
+      "-crf", "20",
+      "-pix_fmt", "yuv420p",
+      "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+      "-c:a", "aac",
+      "-b:a", "192k",
+      "-movflags", "+faststart",
+      "-f", "mp4",
+      "-y",
+      outputPath,
+    ],
+    { maxBuffer: 64 * 1024 * 1024 },
+  );
+}
+
+/**
+ * File unique pour les travaux lourds de ffmpeg, conversions et planches.
+ * Un seul à la fois : chacun décode tout le métrage, et dix envois à la
+ * suite en lanceraient dix de front. Posée sur `globalThis` pour rester
+ * unique même si ce module est chargé par plusieurs paquets serveur.
+ */
+const jobs = globalThis as unknown as { __reviewerMediaQueue?: Promise<void> };
+
+export function enqueueMediaJob(job: () => Promise<void>) {
+  const next = (jobs.__reviewerMediaQueue ?? Promise.resolve()).then(() =>
+    job().catch(() => {}),
+  );
+  jobs.__reviewerMediaQueue = next;
+  return next;
+}
+
 /** Planche d'aperçu : 10 × 10 images réparties sur tout le métrage. */
 export const SPRITE_COLS = 10;
 export const SPRITE_ROWS = 10;

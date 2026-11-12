@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireVideoView } from "@/lib/access";
 import { userColorIndex } from "@/lib/users";
-import { getVideo } from "@/lib/videos";
+import { listVersions } from "@/lib/videos";
 import { getBreadcrumb } from "@/lib/folders";
 import { listComments } from "@/lib/comments";
 import { AppHeader } from "@/components/app-header";
@@ -11,6 +11,8 @@ import { REVIEW_TOUR } from "@/components/tour/steps";
 import { ReviewWorkspace } from "@/components/review-workspace";
 import { StatusPicker } from "@/components/status-picker";
 import { ShareButton } from "@/components/share-button";
+import { VersionsBar } from "@/components/versions-bar";
+import { ProcessingNotice } from "@/components/processing-notice";
 import { isStaff } from "@/lib/access";
 import { formatSize } from "@/lib/format";
 import { formatClock } from "@/lib/timecode";
@@ -30,6 +32,7 @@ export default async function VideoPage({
   const trail = video.folderId ? getBreadcrumb(video.folderId) : [];
   const backHref = video.folderId ? `/f/${video.folderId}` : "/";
   const backLabel = trail.length > 0 ? trail[trail.length - 1].name : "Projets";
+  const versions = listVersions(video);
 
   return (
     <>
@@ -49,6 +52,9 @@ export default async function VideoPage({
             </span>
             <h1 className="heading heading-sm truncate text-[15px]">
               {video.name}
+              {versions.length > 1 && (
+                <span className="ml-2 font-mono text-[12px] text-accent">v{video.version}</span>
+              )}
             </h1>
           </div>
 
@@ -68,14 +74,27 @@ export default async function VideoPage({
           </div>
         </div>
 
-        <ReviewWorkspace
-          videoId={video.id}
-          duration={video.duration}
-          fps={video.fps}
-          comments={listComments(video.id)}
-          currentUserId={user.id}
-          currentUserColor={userColorIndex(user.id)}
+        <VersionsBar
+          versions={versions.map((v) => ({ id: v.id, version: v.version, createdAt: v.createdAt }))}
+          currentId={video.id}
+          canManage={isStaff(user)}
         />
+
+        {video.state === "ready" ? (
+          <ReviewWorkspace
+            // Une version est une autre vidéo : sans clé, passer de la v2 à
+            // la v3 garderait le lecteur, sa position et le brouillon de note.
+            key={video.id}
+            videoId={video.id}
+            duration={video.duration}
+            fps={video.fps}
+            comments={listComments(video.id)}
+            currentUserId={user.id}
+            currentUserColor={userColorIndex(user.id)}
+          />
+        ) : (
+          <ProcessingNotice failed={video.state === "failed"} />
+        )}
       </main>
 
       <Tour id="review" steps={REVIEW_TOUR} />

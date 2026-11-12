@@ -50,7 +50,7 @@ export function ReviewWorkspace({
 }: Props) {
   // Les notes de Jérôme arrivent sans recharger la page. Le rendu serveur
   // fournit l'état de départ, le sondage prend le relais ensuite.
-  const comments = useLiveComments(videoId, fromServer);
+  const { comments, viewers } = useLiveComments(videoId, fromServer);
 
   const playerRef = useRef<PlayerHandle>(null);
   const lastAtRef = useRef(0);
@@ -217,6 +217,7 @@ export function ReviewWorkspace({
         fps={fps}
         comments={comments}
         currentUserId={currentUserId}
+        viewers={viewers}
         currentTime={displayTime}
         activeId={activeId}
         getPreciseTime={getPreciseTime}

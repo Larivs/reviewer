@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatSize } from "@/lib/format";
+import { uploadFile } from "@/lib/upload-client";
+import { toast } from "./toast";
 
 type ItemState = "attente" | "envoi" | "fini" | "erreur";
 
@@ -14,46 +16,6 @@ type Item = {
   state: ItemState;
   error?: string;
 };
-
-/**
- * XMLHttpRequest et non fetch : c'est le seul moyen d'obtenir la progression
- * d'un envoi. Le fichier part en corps brut, écrit au fil de l'eau côté
- * serveur, pas de FormData, qui obligerait à tout charger en mémoire.
- */
-function upload(
-  file: File,
-  folderId: string | null,
-  onProgress: (p: number) => void,
-  /** Reçoit de quoi couper l'envoi en cours. */
-  onStart: (abort: () => void) => void,
-) {
-  return new Promise<void>((resolve, reject) => {
-    const params = new URLSearchParams({ name: file.name });
-    if (folderId) params.set("folderId", folderId);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?${params}`);
-    onStart(() => xhr.abort());
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) onProgress(event.loaded / event.total);
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) return resolve();
-      let message = `Échec (code ${xhr.status})`;
-      try {
-        message = JSON.parse(xhr.responseText).error ?? message;
-      } catch {
-        // Réponse non JSON : on garde le message générique.
-      }
-      reject(new Error(message));
-    };
-    xhr.onerror = () => reject(new Error("Connexion interrompue."));
-    xhr.onabort = () => reject(new Error("Envoi annulé."));
-
-    xhr.send(file);
-  });
-}
 
 export function UploadZone({
   folderId,
@@ -78,6 +40,8 @@ export function UploadZone({
    */
   const chain = useRef<Promise<void>>(Promise.resolve());
   const waiting = useRef(0);
+  const sent = useRef(0);
+  const failedCount = useRef(0);
   const cancelled = useRef(new Set<string>());
   const abortCurrent = useRef<{ key: string; abort: () => void } | null>(null);
 
@@ -127,9 +91,9 @@ export function UploadZone({
         if (cancelled.current.has(item.key)) continue;
         patch(item.key, { state: "envoi" });
         try {
-          await upload(
+          await uploadFile(
             files[i],
-            folderId,
+            { folderId },
             (p) => patch(item.key, { progress: p }),
             (abort) => {
               abortCurrent.current = { key: item.key, abort };
@@ -137,6 +101,7 @@ export function UploadZone({
           );
           patch(item.key, { state: "fini", progress: 1 });
         } catch (error) {
+          failedCount.current += 1;
           patch(item.key, {
             state: "erreur",
             error: error instanceof Error ? error.message : "Échec de l'envoi.",
@@ -146,7 +111,16 @@ export function UploadZone({
       }
 
       waiting.current -= 1;
+      // Un mot à la fin de chaque lot : on dépose, on part faire autre chose,
+      // et la liste est souvent hors de l'écran quand l'envoi se termine.
+      sent.current += queued.filter((item) => !cancelled.current.has(item.key)).length;
       if (waiting.current === 0) {
+        const n = sent.current - failedCount.current;
+        if (n > 0) toast(`${n} vidéo${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""}`);
+        if (failedCount.current > 0)
+          toast(`${failedCount.current} envoi${failedCount.current > 1 ? "s" : ""} en échec`, "error");
+        sent.current = 0;
+        failedCount.current = 0;
         setBusy(false);
         router.refresh();
       }
@@ -218,7 +192,7 @@ export function UploadZone({
             choisis des fichiers
           </button>
         </p>
-        <p className="label mt-2">MP4 · H.264 / AAC. ProRes et DNxHD à réexporter</p>
+        <p className="label mt-2">MP4, MOV, WebM. ProRes, DNxHD et HEVC sont convertis à l'arrivée</p>
 
         {empty && (
           <span aria-hidden className="mt-5 h-px w-40 max-w-full bg-line" />

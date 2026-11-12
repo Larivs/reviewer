@@ -143,6 +143,15 @@ export const VIDEO_STATUSES = [
 
 export type VideoStatus = (typeof VIDEO_STATUSES)[number];
 
+/**
+ * Où en est le fichier, à ne pas confondre avec le statut de review.
+ * `processing` : un format que le navigateur ne lit pas (ProRes, DNxHD, HEVC)
+ * est en cours de conversion en H.264. `failed` : la conversion a échoué ou
+ * le serveur s'est arrêté pendant, il n'y a rien à lire.
+ */
+export const VIDEO_STATES = ["ready", "processing", "failed"] as const;
+export type VideoState = (typeof VIDEO_STATES)[number];
+
 export const videos = sqliteTable(
   "videos",
   {
@@ -154,10 +163,21 @@ export const videos = sqliteTable(
     duration: real("duration"), // secondes
     fps: real("fps"),
     status: text("status").$type<VideoStatus>().notNull().default("a_review"),
+    state: text("state").$type<VideoState>().notNull().default("ready"),
+    /**
+     * Pile de versions : toutes les versions d'un même montage portent l'id
+     * de la première. `null` tant qu'il n'y en a qu'une, pour que la grande
+     * majorité des lignes reste ce qu'elle était avant les versions.
+     */
+    stackId: text("stack_id"),
+    version: integer("version").notNull().default(1),
     uploadedBy: text("uploaded_by"),
     createdAt: integer("created_at").notNull(),
   },
-  (t) => [index("videos_folder_idx").on(t.folderId)],
+  (t) => [
+    index("videos_folder_idx").on(t.folderId),
+    index("videos_stack_idx").on(t.stackId),
+  ],
 );
 
 export const comments = sqliteTable(
