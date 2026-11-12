@@ -25,7 +25,7 @@
  *    de Tailscale s'il est installé.
  */
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
 
@@ -102,6 +102,15 @@ if (builtAt === 0 || changedAt > builtAt) {
     process.exit(build.status ?? 1);
   }
 }
+
+// ── Restes d'envois interrompus ───────────────────────────────────────
+// Un envoi s'écrit en `.part` et n'est renommé qu'une fois validé. Le serveur
+// n'est pas encore lancé : tout `.part` présent ici est un envoi coupé par un
+// arrêt, que plus rien ne finira. Plusieurs gigaoctets, parfois.
+const videoDir = path.join(ROOT, "data", "videos");
+if (existsSync(videoDir))
+  for (const name of readdirSync(videoDir))
+    if (name.endsWith(".part")) rmSync(path.join(videoDir, name), { force: true });
 
 // ── 3. Les vraies adresses ────────────────────────────────────────────
 function addresses() {

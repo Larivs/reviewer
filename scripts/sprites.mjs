@@ -5,11 +5,12 @@
  * l'aperçu au survol. Les nouvelles en reçoivent une à l'upload.
  */
 import Database from "better-sqlite3";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { makeSprite } from "../src/lib/media.ts";
 
 const dataDir = path.join(process.cwd(), "data");
+mkdirSync(path.join(dataDir, "sprites"), { recursive: true });
 const db = new Database(path.join(dataDir, "reviewer.db"));
 
 const videos = db.prepare("SELECT id, name, filename, duration FROM videos").all();

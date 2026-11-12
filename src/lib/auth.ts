@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { hash as argonHash, verify as argonVerify } from "@node-rs/argon2";
 import { asc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
@@ -18,8 +18,14 @@ export function hashPassword(password: string) {
   return argonHash(password);
 }
 
+/**
+ * Une empreinte illisible n'est pas une panne, c'est un refus : les comptes
+ * nés d'un lien portent `"!"` exprès, et tenter de s'y connecter par le
+ * formulaire doit échouer comme un mauvais mot de passe, pas en erreur 500
+ * qui dirait au passage que ce nom existe.
+ */
 export function verifyPassword(storedHash: string, password: string) {
-  return argonVerify(storedHash, password);
+  return argonVerify(storedHash, password).catch(() => false);
 }
 
 /** Le cookie porte le token en clair ; la base n'en garde que l'empreinte. */
@@ -65,6 +71,16 @@ export async function createSession(userId: string) {
     expires: new Date(expiresAt),
     secure: await requestIsSecure(),
   });
+}
+
+/**
+ * Ferme la session en base **sans toucher au cookie**, pour un rendu de
+ * page : Next interdit d'y modifier les cookies, et l'appel levait une
+ * erreur. Le cookie restant ne désigne plus aucune session, il ne vaut rien.
+ */
+export async function revokeSession() {
+  const token = (await cookies()).get(COOKIE)?.value;
+  if (token) db.delete(sessions).where(eq(sessions.id, fingerprint(token))).run();
 }
 
 export async function destroySession() {
@@ -178,10 +194,12 @@ export function deleteUser(userId: string) {
  * L'alphabet écarte ce qui se lit mal quand on dicte ou qu'on recopie :
  * 0/O, 1/l/I, 5/S, 8/B. Cinq groupes de quatre plutôt qu'une chaîne
  * continue, un mot de passe qu'on doit lire à voix haute se découpe.
+ *
+ * Vingt caractères sur 27 : 95 bits. `randomInt` tire sans biais, là où un
+ * octet modulo 27 favorisait les treize premières lettres.
  */
 export function generatePassword() {
   const alphabet = "ACDEFGHJKMNPQRTUVWXYZ234679";
-  const bytes = randomBytes(20);
-  const chars = [...bytes].map((b) => alphabet[b % alphabet.length]);
+  const chars = Array.from({ length: 20 }, () => alphabet[randomInt(alphabet.length)]);
   return [0, 4, 8, 12, 16].map((i) => chars.slice(i, i + 4).join("")).join("-");
 }

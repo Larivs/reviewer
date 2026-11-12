@@ -83,7 +83,28 @@ affichage**, et pas seulement à l'ouverture. Sans ça, l'expiration serait
 décorative : le cookie de session dure trente jours et survivrait largement au
 lien.
 
+**Un droit venu d'un lien porte ce lien** (`link_id` sur `folder_grants` et
+`video_grants`). Avant, fermer un lien retirait les droits des comptes *nés*
+de ce lien, et de ceux-là seulement : un invité entré d'abord par un autre
+lien, ou un compte ouvert à la main, gardait pour toujours ce que le lien
+fermé lui avait ouvert, sans que rien ne l'affiche. La portée ne retient donc
+que les droits posés à la main et ceux dont le lien vit encore, relu à chaque
+affichage. Les droits posés depuis la page Comptes ont `link_id` vide et ne
+bougent pas quand un lien meurt.
+
+Trois en-têtes sur toutes les réponses (`next.config.ts`) : `nosniff`,
+`X-Frame-Options: DENY`, et `Referrer-Policy: same-origin`, ce dernier parce
+que l'adresse d'un lien de review est le droit d'entrer et ne doit pas partir
+dans un `Referer`.
+
 ## Upload et lecture
+
+Le fichier s'écrit sous un nom en `.part`, renommé une fois validé par
+ffprobe : un arrêt du serveur en plein envoi laisse un reste reconnaissable,
+que `npm run serve` retire au démarrage. La planche d'aperçu se fabrique
+**après** la réponse, une à la fois : elle décode tout le métrage, et
+l'attendre gardait la barre d'envoi figée à 100 % pendant des minutes. La
+piste la redemande quelques fois tant qu'elle n'est pas prête.
 
 L'envoi se fait en corps de requête brut, écrit sur le disque au fil de l'eau :
 un fichier de plusieurs gigaoctets ne passe jamais entièrement en mémoire.

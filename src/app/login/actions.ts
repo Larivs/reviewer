@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { createSession, destroySession, findUserByName, verifyPassword } from "@/lib/auth";
 import { clearFailures, isLockedOut, recordFailure } from "@/lib/rate-limit";
 
-export type LoginState = { error?: string };
+/** `name` revient avec l'erreur pour que le formulaire le garde affiché. */
+export type LoginState = { error?: string; name?: string };
 
 export async function login(
   _prev: LoginState,
@@ -13,9 +14,13 @@ export async function login(
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!name || !password) return { error: "Renseigne ton nom et ton mot de passe." };
+  if (!name || !password) return { error: "Renseigne ton nom et ton mot de passe.", name };
+  // Bornes larges : aucun nom ni mot de passe réel ne les atteint, et elles
+  // évitent de hacher un mégaoctet à chaque tentative anonyme.
+  if (name.length > 80 || password.length > 200)
+    return { error: "Nom ou mot de passe incorrect." };
   if (isLockedOut(name))
-    return { error: "Trop de tentatives. Réessaie dans quelques minutes." };
+    return { error: "Trop de tentatives. Réessaie dans quelques minutes.", name };
 
   const user = findUserByName(name);
 
@@ -26,11 +31,11 @@ export async function login(
     : await verifyPassword(
         "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHlzYWx0eXNhbHQ$0nCPnZKp0m1UEcqCUXBUyhLcCUJEIWqAtLYqZ5DwmSg",
         password,
-      ).catch(() => false);
+      );
 
   if (!user || !ok) {
     recordFailure(name);
-    return { error: "Nom ou mot de passe incorrect." };
+    return { error: "Nom ou mot de passe incorrect.", name };
   }
 
   clearFailures(name);

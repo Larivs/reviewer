@@ -31,29 +31,42 @@ const MIN_RANGE = 0.08;
 
 export type Range = { start: number; end: number };
 
+type Sprite = { url: string; w: number; h: number };
+const SPRITE_ATTEMPTS = 5;
+const SPRITE_RETRY_MS = 20_000;
+
 /**
  * Charge la planche d'aperçu, mais **seulement au premier survol** : c'est
  * 180 Ko qu'on ne télécharge pas si personne ne survole la piste. Renvoie
  * ses dimensions natives, dont on déduit le rapport d'une vignette.
  */
 function useSprite(videoId: string, wanted: boolean) {
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const [missing, setMissing] = useState(false);
+  const [sprite, setSprite] = useState<Sprite | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (!wanted || size || missing) return;
+    if (!wanted || sprite || attempt >= SPRITE_ATTEMPTS) return;
+    let timer = 0;
     const img = new Image();
-    img.src = `/api/videos/${videoId}/sprite`;
-    img.onload = () => setSize({ w: img.naturalWidth, h: img.naturalHeight });
-    // Vidéo envoyée avant l'arrivée de l'aperçu : on n'insiste pas.
-    img.onerror = () => setMissing(true);
+    // Le numéro d'essai dans l'adresse : sans lui le navigateur resservirait
+    // son échec précédent.
+    const url = `/api/videos/${videoId}/sprite${attempt > 0 ? `?essai=${attempt}` : ""}`;
+    img.src = url;
+    img.onload = () => setSprite({ url, w: img.naturalWidth, h: img.naturalHeight });
+    // La planche se fabrique après l'envoi et peut ne pas être prête : on
+    // repasse quelques fois, puis on n'insiste plus, une vidéo ancienne
+    // n'en aura jamais.
+    img.onerror = () => {
+      timer = window.setTimeout(() => setAttempt((n) => n + 1), SPRITE_RETRY_MS);
+    };
     return () => {
+      window.clearTimeout(timer);
       img.onload = null;
       img.onerror = null;
     };
-  }, [videoId, wanted, size, missing]);
+  }, [videoId, wanted, sprite, attempt]);
 
-  return size;
+  return sprite;
 }
 
 export type Marker = {
@@ -549,7 +562,6 @@ export function Timeline({
 
       {hover !== null && (
         <Preview
-          videoId={videoId}
           time={hover}
           ratio={pct(hover)}
           duration={duration}
@@ -561,17 +573,15 @@ export function Timeline({
 }
 
 function Preview({
-  videoId,
   time,
   ratio,
   duration,
   sprite,
 }: {
-  videoId: string;
   time: number;
   ratio: number;
   duration: number;
-  sprite: { w: number; h: number } | null;
+  sprite: Sprite | null;
 }) {
   const tileHeight = sprite
     ? Math.round((PREVIEW_WIDTH * (sprite.h / SPRITE_ROWS)) / (sprite.w / SPRITE_COLS))
@@ -597,7 +607,7 @@ function Preview({
           style={{
             width: PREVIEW_WIDTH,
             height: tileHeight,
-            backgroundImage: `url(/api/videos/${videoId}/sprite)`,
+            backgroundImage: `url(${sprite.url})`,
             backgroundSize: `${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}%`,
             backgroundPosition: `${(col / (SPRITE_COLS - 1)) * 100}% ${(row / (SPRITE_ROWS - 1)) * 100}%`,
           }}

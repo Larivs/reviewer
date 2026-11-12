@@ -277,7 +277,7 @@ export function VideoCard({
 
       {/* Filet entre l'image et son étiquette, là où l'œil passe de l'une
           à l'autre. */}
-      <span aria-hidden className="h-px bg-line" />
+      <span aria-hidden className="block h-px bg-line" />
 
       <div className="p-2.5">
         <p className="truncate text-sm font-medium" title={video.name}>

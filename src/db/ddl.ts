@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS folder_grants (
   user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   folder_id  TEXT NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+  link_id    TEXT REFERENCES share_links(id) ON DELETE CASCADE,
   created_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, folder_id)
 );
@@ -29,6 +30,7 @@ CREATE INDEX IF NOT EXISTS folder_grants_user_idx ON folder_grants(user_id);
 CREATE TABLE IF NOT EXISTS video_grants (
   user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   video_id   TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+  link_id    TEXT REFERENCES share_links(id) ON DELETE CASCADE,
   created_at INTEGER NOT NULL,
   PRIMARY KEY (user_id, video_id)
 );

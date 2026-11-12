@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatSize } from "@/lib/format";
 
@@ -20,13 +20,20 @@ type Item = {
  * d'un envoi. Le fichier part en corps brut, écrit au fil de l'eau côté
  * serveur, pas de FormData, qui obligerait à tout charger en mémoire.
  */
-function upload(file: File, folderId: string | null, onProgress: (p: number) => void) {
+function upload(
+  file: File,
+  folderId: string | null,
+  onProgress: (p: number) => void,
+  /** Reçoit de quoi couper l'envoi en cours. */
+  onStart: (abort: () => void) => void,
+) {
   return new Promise<void>((resolve, reject) => {
     const params = new URLSearchParams({ name: file.name });
     if (folderId) params.set("folderId", folderId);
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/upload?${params}`);
+    onStart(() => xhr.abort());
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(event.loaded / event.total);
@@ -63,6 +70,25 @@ export function UploadZone({
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  /**
+   * File unique. Un second dépôt pendant un envoi s'ajoute **derrière** le
+   * premier : chaque dépôt lançait sa propre boucle, donc deux envois en
+   * parallèle, et la première boucle à finir déclarait la zone libre alors
+   * que l'autre envoyait encore.
+   */
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const waiting = useRef(0);
+  const cancelled = useRef(new Set<string>());
+  const abortCurrent = useRef<{ key: string; abort: () => void } | null>(null);
+
+  // Fermer l'onglet pendant un envoi le perd en entier, il n'y a pas de
+  // reprise : le navigateur demande confirmation.
+  useEffect(() => {
+    if (!busy) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy]);
 
   function patch(key: string, changes: Partial<Item>) {
     setItems((current) =>
@@ -70,10 +96,19 @@ export function UploadZone({
     );
   }
 
-  async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  function cancel(key: string) {
+    cancelled.current.add(key);
+    if (abortCurrent.current?.key === key) abortCurrent.current.abort();
+    else patch(key, { state: "erreur", error: "Envoi annulé." });
+  }
 
-    const queued: Item[] = Array.from(files).map((file, i) => ({
+  function handleFiles(list: FileList | null) {
+    if (!list || list.length === 0) return;
+
+    // Copie immédiate : la `FileList` d'un champ est vidée dès qu'on remet
+    // sa valeur à zéro, bien avant que la file n'arrive à ces fichiers.
+    const files = Array.from(list);
+    const queued: Item[] = files.map((file, i) => ({
       key: `${Date.now()}-${i}-${file.name}`,
       name: file.name,
       size: file.size,
@@ -83,24 +118,39 @@ export function UploadZone({
 
     setItems((current) => [...current, ...queued]);
     setBusy(true);
+    waiting.current += 1;
 
     // Envoi séquentiel : deux gros fichiers en parallèle se partagent la même
     // bande passante et arrivent tous les deux plus tard.
-    for (const [i, item] of queued.entries()) {
-      patch(item.key, { state: "envoi" });
-      try {
-        await upload(files[i], folderId, (p) => patch(item.key, { progress: p }));
-        patch(item.key, { state: "fini", progress: 1 });
-      } catch (error) {
-        patch(item.key, {
-          state: "erreur",
-          error: error instanceof Error ? error.message : "Échec de l'envoi.",
-        });
+    chain.current = chain.current.then(async () => {
+      for (const [i, item] of queued.entries()) {
+        if (cancelled.current.has(item.key)) continue;
+        patch(item.key, { state: "envoi" });
+        try {
+          await upload(
+            files[i],
+            folderId,
+            (p) => patch(item.key, { progress: p }),
+            (abort) => {
+              abortCurrent.current = { key: item.key, abort };
+            },
+          );
+          patch(item.key, { state: "fini", progress: 1 });
+        } catch (error) {
+          patch(item.key, {
+            state: "erreur",
+            error: error instanceof Error ? error.message : "Échec de l'envoi.",
+          });
+        }
+        abortCurrent.current = null;
       }
-    }
 
-    setBusy(false);
-    router.refresh();
+      waiting.current -= 1;
+      if (waiting.current === 0) {
+        setBusy(false);
+        router.refresh();
+      }
+    });
   }
 
   const done = items.filter((i) => i.state === "fini").length;
@@ -137,7 +187,7 @@ export function UploadZone({
         <input
           ref={inputRef}
           type="file"
-          accept="video/*.mp4.mov.m4v.webm.mkv"
+          accept="video/*,.mp4,.mov,.m4v,.webm,.mkv"
           multiple
           hidden
           onChange={(e) => {
@@ -163,8 +213,7 @@ export function UploadZone({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            disabled={busy}
-            className="font-medium text-accent underline-offset-2 hover:underline disabled:opacity-55"
+            className="font-medium text-accent underline-offset-2 hover:underline"
           >
             choisis des fichiers
           </button>
@@ -187,6 +236,15 @@ export function UploadZone({
                   {item.state === "attente" && "En attente"}
                   {item.state === "fini" && "Envoyée"}
                   {item.state === "erreur" && formatSize(item.size)}
+                  {(item.state === "envoi" || item.state === "attente") && (
+                    <button
+                      type="button"
+                      onClick={() => cancel(item.key)}
+                      className="ml-3 underline-offset-2 hover:text-fg hover:underline"
+                    >
+                      Annuler
+                    </button>
+                  )}
                 </span>
               </div>
 

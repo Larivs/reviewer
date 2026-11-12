@@ -1,6 +1,6 @@
 import "server-only";
-import { randomBytes, randomUUID } from "node:crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { asc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   folderGrants,
@@ -11,6 +11,7 @@ import {
   videoGrants,
   videos,
 } from "@/db/schema";
+import { generatePassword } from "./auth";
 import { LINK_DURATIONS, type LinkDuration, type ShareTarget } from "./share-types";
 
 // Reexport pour le serveur : les appelants cote serveur n'ont pas a savoir
@@ -34,17 +35,12 @@ export type { LinkDuration, ShareTarget };
  */
 
 /**
- * Jeton de l'URL. 160 bits tirés au hasard : il n'est pas deviné, et c'est
- * la seule chose qui protège l'accès. L'alphabet est celui des mots de
- * passe générés, on écarte ce qui se lit mal si quelqu'un le recopie à la
- * main depuis un message.
+ * Jeton de l'URL. 95 bits tirés au hasard : il n'est pas deviné, et c'est
+ * la seule chose qui protège l'accès. Même tirage et même alphabet que les
+ * mots de passe générés, on écarte ce qui se lit mal si quelqu'un le recopie
+ * à la main depuis un message.
  */
-function makeToken() {
-  const alphabet = "ACDEFGHJKMNPQRTUVWXYZ234679";
-  const bytes = randomBytes(20);
-  const chars = [...bytes].map((b) => alphabet[b % alphabet.length]);
-  return [0, 4, 8, 12, 16].map((i) => chars.slice(i, i + 4).join("")).join("-");
-}
+const makeToken = generatePassword;
 
 export function createShareLink(
   target: ShareTarget,
@@ -135,21 +131,26 @@ export function listShareLinks(): LinkRow[] {
  * sessions, ils ne voient plus rien, mais ce qu'ils ont écrit demeure.
  */
 export function deleteShareLink(linkId: string) {
-  const guests = db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.invitedVia, linkId))
-    .all()
-    .map((u) => u.id);
+  return db.transaction((tx) => {
+    const guests = tx
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.invitedVia, linkId))
+      .all()
+      .map((u) => u.id);
 
-  for (const id of guests) {
-    db.delete(folderGrants).where(eq(folderGrants.userId, id)).run();
-    db.delete(videoGrants).where(eq(videoGrants.userId, id)).run();
-    db.delete(sessions).where(eq(sessions.userId, id)).run();
-  }
+    for (const id of guests)
+      tx.delete(sessions).where(eq(sessions.userId, id)).run();
 
-  db.delete(shareLinks).where(eq(shareLinks.id, linkId)).run();
-  return guests.length;
+    // Tous les droits ouverts par ce lien, à qui que ce soit : un compte né
+    // d'un autre lien, ou ouvert à la main, peut être entré par celui-ci.
+    // La cascade du DDL le ferait, mais elle dépend du pragma `foreign_keys`.
+    tx.delete(folderGrants).where(eq(folderGrants.linkId, linkId)).run();
+    tx.delete(videoGrants).where(eq(videoGrants.linkId, linkId)).run();
+
+    tx.delete(shareLinks).where(eq(shareLinks.id, linkId)).run();
+    return guests.length;
+  });
 }
 
 /**
@@ -160,14 +161,24 @@ export function deleteShareLink(linkId: string) {
  * donne le même accès de toute façon. Le gain est réel, sans ça, un client
  * dont le cookie a expiré reviendrait sous « Marie (2) » et perdrait le fil
  * de ses propres notes.
+ *
+ * On reconnaît aussi la forme suffixée : si une autre Marie existait déjà
+ * dans l'espace, celle-ci a été enregistrée « Marie (2) » par `uniqueName`,
+ * et elle redonne « Marie » en revenant. Chercher le nom exact seulement la
+ * faisait renaître en « Marie (3) » à chaque visite.
  */
 export function findGuest(linkId: string, name: string) {
+  const suffixed = (stored: string) =>
+    stored.startsWith(`${name} (`) && /^ \(\d+\)$/.test(stored.slice(name.length));
+
   return (
     db
       .select({ id: users.id, name: users.name })
       .from(users)
-      .where(and(eq(users.invitedVia, linkId), eq(users.name, name)))
-      .get() ?? null
+      .where(eq(users.invitedVia, linkId))
+      .orderBy(asc(users.createdAt))
+      .all()
+      .find((u) => u.name === name || suffixed(u.name)) ?? null
   );
 }
 
@@ -190,20 +201,42 @@ export function uniqueName(wanted: string) {
   return `${wanted} (${randomUUID().slice(0, 4)})`;
 }
 
-/** Ouvre au compte l'accès que porte le lien. */
+/**
+ * Ouvre au compte l'accès que porte le lien, **rattaché à ce lien** : il se
+ * referme avec lui. Un droit posé à la main sur la même cible reste tel quel,
+ * il est plus fort ; un droit venu d'un autre lien passe à celui-ci, le plus
+ * récemment présenté.
+ */
 export function applyLinkGrant(userId: string, link: ShareLink) {
   const now = Date.now();
   if (link.videoId) {
     db.insert(videoGrants)
-      .values({ userId, videoId: link.videoId, createdAt: now })
-      .onConflictDoNothing()
+      .values({ userId, videoId: link.videoId, linkId: link.id, createdAt: now })
+      .onConflictDoUpdate({
+        target: [videoGrants.userId, videoGrants.videoId],
+        set: { linkId: link.id },
+        setWhere: isNotNull(videoGrants.linkId),
+      })
       .run();
   } else if (link.folderId) {
     db.insert(folderGrants)
-      .values({ userId, folderId: link.folderId, createdAt: now })
-      .onConflictDoNothing()
+      .values({ userId, folderId: link.folderId, linkId: link.id, createdAt: now })
+      .onConflictDoUpdate({
+        target: [folderGrants.userId, folderGrants.folderId],
+        set: { linkId: link.id },
+        setWhere: isNotNull(folderGrants.linkId),
+      })
       .run();
   }
+}
+
+/** La cible existe-t-elle ? Vérifié avant de créer un lien vers elle. */
+export function targetExists(target: ShareTarget) {
+  const table = target.kind === "video" ? videos : folders;
+  return (
+    db.select({ id: table.id }).from(table).where(eq(table.id, target.id)).get() !==
+    undefined
+  );
 }
 
 /** Où atterrit le client une fois entré. */

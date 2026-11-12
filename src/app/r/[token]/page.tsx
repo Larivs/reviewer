@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { Logo } from "@/components/logo";
-import { getViewer } from "@/lib/access";
+import { getViewer, isGuest } from "@/lib/access";
 import {
+  applyLinkGrant,
   describeLink,
   getLinkByToken,
   linkDestination,
@@ -31,7 +32,12 @@ export default async function JoinPage({
   // Déjà dans la place, le studio qui vérifie son propre lien, ou le client
   // qui revient avec son cookie. On ne lui redemande pas son prénom.
   const viewer = await getViewer();
-  if (viewer) redirect(linkDestination(link));
+  if (viewer) {
+    // Un invité déjà entré par un autre lien : sans ce droit, il était
+    // renvoyé vers une vidéo qu'il ne pouvait pas voir, donc un 404.
+    if (isGuest(viewer)) applyLinkGrant(viewer.id, link);
+    redirect(linkDestination(link));
+  }
 
   const target = describeLink(link);
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   folderGrants,
@@ -113,20 +113,42 @@ export const getScope = cache(async (): Promise<Scope> => {
   const viewer = await requireViewer();
   if (!isGuest(viewer)) return null;
 
+  // Un droit ouvert par un lien meurt avec lui. La suppression du lien
+  // emporte la ligne ; l'expiration, elle, ne supprime rien, d'où ce filtre
+  // à chaque lecture plutôt qu'un ménage qu'il faudrait penser à lancer.
+  const now = Date.now();
+  const live = (g: { linkId: string | null; linkExists: string | null; expiresAt: number | null }) =>
+    g.linkId === null ||
+    (g.linkExists !== null && (g.expiresAt === null || g.expiresAt > now));
+
   const roots = db
-    .select({ folderId: folderGrants.folderId })
+    .select({
+      folderId: folderGrants.folderId,
+      linkId: folderGrants.linkId,
+      linkExists: shareLinks.id,
+      expiresAt: shareLinks.expiresAt,
+    })
     .from(folderGrants)
+    .leftJoin(shareLinks, eq(shareLinks.id, folderGrants.linkId))
     .where(eq(folderGrants.userId, viewer.id))
     .all()
+    .filter(live)
     .map((r) => r.folderId);
 
   // Vidéos ouvertes seules, par un lien qui ne partageait qu'un montage.
   const grantedVideos = new Set(
     db
-      .select({ videoId: videoGrants.videoId })
+      .select({
+        videoId: videoGrants.videoId,
+        linkId: videoGrants.linkId,
+        linkExists: shareLinks.id,
+        expiresAt: shareLinks.expiresAt,
+      })
       .from(videoGrants)
+      .leftJoin(shareLinks, eq(shareLinks.id, videoGrants.linkId))
       .where(eq(videoGrants.userId, viewer.id))
       .all()
+      .filter(live)
       .map((r) => r.videoId),
   );
 
@@ -283,6 +305,9 @@ export function listAccounts(): Account[] {
     })
     .from(folderGrants)
     .innerJoin(folders, eq(folders.id, folderGrants.folderId))
+    // Seulement les droits posés à la main : ceux d'un lien se gèrent par
+    // le lien, dans la liste des liens actifs.
+    .where(isNull(folderGrants.linkId))
     .orderBy(asc(folders.name))
     .all();
 
@@ -296,27 +321,51 @@ export function listAccounts(): Account[] {
   return rows.map((row) => ({ ...row, grants: byUser.get(row.id) ?? [] }));
 }
 
+/**
+ * Pose les droits manuels d'un compte. Ne touche pas à ceux qu'un lien a
+ * ouverts : décocher un projet ici ne doit pas fermer un lien, et l'inverse.
+ * Cocher un projet déjà ouvert par un lien le rend permanent, c'est bien ce
+ * que l'admin vient de demander.
+ */
 export function setGrants(userId: string, folderIds: string[]) {
-  db.delete(folderGrants).where(eq(folderGrants.userId, userId)).run();
-  if (folderIds.length === 0) return;
-
-  const now = Date.now();
   // On ne garde que des dossiers qui existent : un identifiant venu du
   // navigateur ne doit pas créer une ligne qui ne pointe nulle part.
   const known = new Set(db.select({ id: folders.id }).from(folders).all().map((f) => f.id));
-  const rows = [...new Set(folderIds)]
-    .filter((id) => known.has(id))
-    .map((folderId) => ({ userId, folderId, createdAt: now }));
+  const wanted = [...new Set(folderIds)].filter((id) => known.has(id));
+  const now = Date.now();
 
-  if (rows.length > 0) db.insert(folderGrants).values(rows).run();
+  db.transaction((tx) => {
+    tx.delete(folderGrants)
+      .where(
+        and(
+          eq(folderGrants.userId, userId),
+          isNull(folderGrants.linkId),
+          notInArray(folderGrants.folderId, wanted),
+        ),
+      )
+      .run();
+    if (wanted.length === 0) return;
+    tx.insert(folderGrants)
+      .values(wanted.map((folderId) => ({ userId, folderId, linkId: null, createdAt: now })))
+      .onConflictDoUpdate({
+        target: [folderGrants.userId, folderGrants.folderId],
+        set: { linkId: null },
+      })
+      .run();
+  });
 }
 
 export function setRole(userId: string, role: UserRole) {
-  db.update(users).set({ role }).where(eq(users.id, userId)).run();
-  // Un compte qui repasse au studio voit tout : ses droits par projet n'ont
-  // plus de sens et resteraient à se réappliquer en silence s'il redevenait
-  // invité un jour.
-  if (role !== "invite") db.delete(folderGrants).where(eq(folderGrants.userId, userId)).run();
+  db.transaction((tx) => {
+    tx.update(users).set({ role }).where(eq(users.id, userId)).run();
+    // Un compte qui repasse au studio voit tout : ses droits par projet n'ont
+    // plus de sens et resteraient à se réappliquer en silence s'il redevenait
+    // invité un jour.
+    if (role !== "invite") {
+      tx.delete(folderGrants).where(eq(folderGrants.userId, userId)).run();
+      tx.delete(videoGrants).where(eq(videoGrants.userId, userId)).run();
+    }
+  });
 }
 
 /** Nombre d'administrateurs, pour ne pas laisser l'espace sans gardien. */

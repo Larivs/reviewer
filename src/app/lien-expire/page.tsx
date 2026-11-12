@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { destroySession } from "@/lib/auth";
+import { revokeSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * plus rien mais qui l'empêche de repasser par un nouveau lien.
  */
 export default async function ExpiredPage() {
-  await destroySession();
+  await revokeSession();
 
   return (
     <main className="relative grid min-h-dvh place-items-center overflow-hidden px-6">
