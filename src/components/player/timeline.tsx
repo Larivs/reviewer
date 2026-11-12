@@ -9,6 +9,13 @@ const SPRITE_COLS = 10;
 const SPRITE_ROWS = 10;
 const PREVIEW_WIDTH = 150;
 
+/** Hauteur de la bande d'images, en pixels. */
+const STRIP_HEIGHT = 44;
+/** Écart minimal entre deux graduations chiffrées de la règle. */
+const TICK_SPACING = 84;
+/** Pas « ronds » d'une règle de temps, en secondes. */
+const TICK_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+
 /** Hauteur d'une rangée de repères, marge comprise. */
 const LANE_HEIGHT = 8;
 /** Au-delà, on empilerait plus haut que le lecteur ne le supporte. */
@@ -36,9 +43,12 @@ const SPRITE_ATTEMPTS = 5;
 const SPRITE_RETRY_MS = 20_000;
 
 /**
- * Charge la planche d'aperçu, mais **seulement au premier survol** : c'est
- * 180 Ko qu'on ne télécharge pas si personne ne survole la piste. Renvoie
- * ses dimensions natives, dont on déduit le rapport d'une vignette.
+ * Charge la planche d'aperçu et renvoie ses dimensions natives, dont on
+ * déduit le rapport d'une vignette.
+ *
+ * Elle n'était chargée qu'au premier survol, pour économiser 180 Ko. Elle
+ * est maintenant le matériau de la piste elle-même, la bande d'images, donc
+ * demandée dès l'ouverture : c'est ce qu'on vient regarder sur cette page.
  */
 function useSprite(videoId: string, wanted: boolean) {
   const [sprite, setSprite] = useState<Sprite | null>(null);
@@ -144,7 +154,7 @@ export function Timeline({
 
   const [trackWidth, setTrackWidth] = useState(0);
 
-  const sprite = useSprite(videoId, everHovered);
+  const sprite = useSprite(videoId, true);
   const rawScrub = onScrub ?? onSeek;
 
   /**
@@ -345,6 +355,46 @@ export function Timeline({
     if (!inside) setHover(null);
   }
 
+  /**
+   * La bande d'images : la piste est faite du film lui-même.
+   *
+   * Un filet de 4 px disait où on en était, pas ce qu'il y avait à cet
+   * endroit. On cherchait un plan en balayant la barre et en lisant l'aperçu.
+   * Avec les images posées bout à bout, comme sur une timeline de montage, on
+   * voit le changement de plan avant d'y aller.
+   *
+   * Autant de vignettes que la largeur en contient, chacune prise au milieu
+   * de l'intervalle qu'elle couvre. Sans planche (vidéo ancienne, conversion
+   * en cours) on retombe sur le filet d'avant.
+   */
+  const tiles = useMemo(() => {
+    if (!sprite || trackWidth <= 0 || duration <= 0) return null;
+    const tileWidth = STRIP_HEIGHT * ((sprite.w / SPRITE_COLS) / (sprite.h / SPRITE_ROWS));
+    const count = Math.max(1, Math.round(trackWidth / tileWidth));
+    return Array.from({ length: count }, (_, i) => {
+      const index = Math.min(
+        SPRITE_COLS * SPRITE_ROWS - 1,
+        Math.floor(((i + 0.5) / count) * SPRITE_COLS * SPRITE_ROWS),
+      );
+      return {
+        x: ((index % SPRITE_COLS) / (SPRITE_COLS - 1)) * 100,
+        y: (Math.floor(index / SPRITE_COLS) / (SPRITE_ROWS - 1)) * 100,
+      };
+    });
+  }, [sprite, trackWidth, duration]);
+  const strip = tiles !== null;
+
+  /** Graduations de la règle : le premier pas rond qui laisse la place de lire. */
+  const ticks = useMemo(() => {
+    if (!strip || duration <= 0) return [];
+    const perPixel = duration / trackWidth;
+    const step = TICK_STEPS.find((s) => s / perPixel >= TICK_SPACING) ?? 3600;
+    const list: number[] = [];
+    // On s'arrête avant la fin : la dernière étiquette déborderait du lecteur.
+    for (let time = 0; time < duration - step * 0.35; time += step) list.push(time);
+    return list;
+  }, [strip, duration, trackWidth]);
+
   // La piste s'épaissit au survol **et** pendant le glissement : en
   // `hover:` seul, elle redevenait un filet de 4 px dès que le curseur
   // sortait de la barre, alors qu'on était toujours en train de scruber.
@@ -352,7 +402,22 @@ export function Timeline({
   const showRange = range !== null && duration > 0;
 
   return (
-    <div data-tour="timeline" className="relative pt-4">
+    <div data-tour="timeline" className={`relative ${strip ? "pt-5" : "pt-4"}`}>
+      {/* Règle de temps. Elle cède la place à la consigne pendant le choix
+          d'une plage, les deux occupent la même marge. */}
+      {strip && !rangeArmed && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-5">
+          {ticks.map((time) => (
+            <span
+              key={time}
+              className="absolute bottom-0 flex h-full items-end border-l border-line-strong pl-1 font-mono text-[9.5px] leading-none tabular-nums text-muted"
+              style={{ left: `${pct(time)}%` }}
+            >
+              <span className="pb-1">{formatClock(time)}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {/* Bandeau d'aide, présent seulement pendant le choix d'une plage. Il
           occupe la place déjà réservée au-dessus de la piste, donc rien ne
           se déplace quand il apparaît. */}
@@ -383,21 +448,52 @@ export function Timeline({
         onPointerLeave={() => {
           if (!dragging) setHover(null);
         }}
-        className={`group relative -my-2.5 flex h-6 touch-none select-none items-center ${
-          rangeArmed ? "cursor-crosshair" : "cursor-pointer"
-        }`}
+        className={`group relative flex touch-none select-none items-center ${
+          strip ? "" : "-my-2.5 h-6"
+        } ${rangeArmed ? "cursor-crosshair" : "cursor-pointer"}`}
+        style={strip ? { height: STRIP_HEIGHT } : undefined}
       >
         <div
           ref={trackRef}
-          className={`relative w-full bg-surface-3 transition-[height] ${
-            active || rangeArmed ? "h-2" : "h-1"
-          }`}
+          className={
+            strip
+              ? "relative h-full w-full overflow-hidden rounded-sm bg-black ring-1 ring-line"
+              : `relative w-full bg-surface-3 transition-[height] ${
+                  active || rangeArmed ? "h-2" : "h-1"
+                }`
+          }
         >
+          {tiles && sprite && (
+            <div aria-hidden className="absolute inset-0 flex">
+              {tiles.map((tile, i) => (
+                <span
+                  key={i}
+                  className="h-full flex-1 border-r border-black/60 last:border-r-0"
+                  style={{
+                    backgroundImage: `url(${sprite.url})`,
+                    backgroundSize: `${SPRITE_COLS * 100}% ${SPRITE_ROWS * 100}%`,
+                    backgroundPosition: `${tile.x}% ${tile.y}%`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Ce qui reste à voir recule dans l'ombre : la partie lue se lit
+              d'un coup d'œil sans poser un aplat de couleur sur les images. */}
+          {strip && (
+            <div
+              aria-hidden
+              className="absolute inset-y-0 right-0 bg-bg/60"
+              style={{ left: `${pct(currentTime)}%` }}
+            />
+          )}
+
           {/* Portions déjà téléchargées : montre ce qui est prêt à jouer. */}
           {buffered.map(([start, end], i) => (
             <div
               key={i}
-              className="absolute inset-y-0 bg-line-strong"
+              className={`absolute bg-line-strong ${strip ? "bottom-0 h-0.5 opacity-80" : "inset-y-0"}`}
               style={{ left: `${pct(start)}%`, width: `${pct(end - start)}%` }}
             />
           ))}
@@ -406,7 +502,7 @@ export function Timeline({
               l'écran à porter l'accent, donc celui où le néon se voit sans
               qu'on ait à le poser partout ailleurs. */}
           <div
-            className="neon-soft absolute inset-y-0 left-0 bg-accent"
+            className={`neon-soft absolute left-0 bg-accent ${strip ? "bottom-0 h-0.5" : "inset-y-0"}`}
             style={{ width: `${pct(currentTime)}%` }}
           />
 
@@ -415,7 +511,9 @@ export function Timeline({
               la même famille de teinte. */}
           {showRange && (
             <div
-              className="neon-soft pointer-events-none absolute -bottom-1 -top-1 border-x-2 border-accent bg-accent/25"
+              className={`neon-soft pointer-events-none absolute border-x-2 border-accent bg-accent/25 ${
+                strip ? "inset-y-0" : "-bottom-1 -top-1"
+              }`}
               style={{
                 left: `${pct(range.start)}%`,
                 width: `${Math.max(pct(range.end - range.start), 0.2)}%`,
@@ -440,12 +538,16 @@ export function Timeline({
               title={`${edge === "start" ? "Début" : "Fin"} : ${formatClock(
                 edge === "start" ? range.start : range.end,
               )}`}
-              className="absolute top-1/2 h-5 w-3 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize"
+              className={`absolute top-1/2 w-3 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize ${
+                strip ? "h-full" : "h-5"
+              }`}
               style={{ left: `${pct(edge === "start" ? range.start : range.end)}%` }}
             >
               <span
                 aria-hidden
-                className="absolute left-1/2 top-1/2 h-4 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
+                className={`absolute left-1/2 top-1/2 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_0_1px_rgba(0,0,0,0.6)] ${
+                  strip ? "h-full" : "h-4"
+                }`}
               />
             </button>
           ))}
@@ -455,15 +557,30 @@ export function Timeline({
             piste est active, ce qui la rend attrapable sans la grossir :
             une pastille masquerait justement la position qu'elle indique. */}
         <div
-          className={`pointer-events-none absolute top-1/2 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-fg shadow-[0_0_7px_rgba(232,236,243,0.5)] transition-[height] ${
-            active ? "h-5" : "h-2.5"
-          }`}
+          className={
+            strip
+              ? "neon pointer-events-none absolute -bottom-1 -top-1.5 w-0.5 -translate-x-1/2 bg-accent"
+              : `pointer-events-none absolute top-1/2 w-0.5 -translate-x-1/2 -translate-y-1/2 bg-fg shadow-[0_0_7px_rgba(232,236,243,0.5)] transition-[height] ${
+                  active ? "h-5" : "h-2.5"
+                }`
+          }
           style={{ left: `${pct(currentTime)}%` }}
-        />
+        >
+          {/* Sur la bande, la tête porte un onglet : c'est lui qu'on repère
+              parmi les images, un trait seul s'y perdait. */}
+          {strip && (
+            <span
+              aria-hidden
+              className="absolute left-1/2 top-0 size-0 -translate-x-1/2 border-x-[5px] border-t-[6px] border-x-transparent border-t-accent"
+            />
+          )}
+        </div>
 
         {hover !== null && !dragging && (
           <div
-            className="pointer-events-none absolute top-1/2 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 bg-fg/40"
+            className={`pointer-events-none absolute top-1/2 w-px -translate-x-1/2 -translate-y-1/2 ${
+              strip ? "h-full bg-fg/70" : "h-2.5 bg-fg/40"
+            }`}
             style={{ left: `${pct(hover)}%` }}
           />
         )}

@@ -40,6 +40,39 @@ export function VideoCard({
   const [mode, setMode] = useState<Mode>("idle");
   const [error, setError] = useState<string | null>(null);
   const [thumbBroken, setThumbBroken] = useState(false);
+  /**
+   * Parcours au survol : glisser la souris sur la vignette fait défiler le
+   * film, de gauche à droite. On reconnaît un montage à trois de ses plans
+   * bien plus sûrement qu'à sa première image, et ça évite de l'ouvrir pour
+   * vérifier que c'est le bon.
+   *
+   * Les images viennent de la planche d'aperçu que la piste utilise déjà.
+   * Elle n'est demandée qu'au premier survol de **cette** vignette : une
+   * grille de quarante vidéos ne télécharge pas quarante planches.
+   */
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const [scrub, setScrub] = useState<number | null>(null);
+  const [sprite, setSprite] = useState<{ w: number; h: number } | "none" | null>(null);
+  const spriteUrl = `/api/videos/${video.id}/sprite`;
+
+  function onScrub(event: React.PointerEvent<HTMLDivElement>) {
+    // À la souris seulement : au doigt, le geste appartient au défilement.
+    if (event.pointerType !== "mouse" || video.state !== "ready") return;
+    const box = thumbRef.current?.getBoundingClientRect();
+    if (!box || event.clientY > box.bottom || event.clientY < box.top) return setScrub(null);
+
+    if (sprite === null) {
+      setSprite("none");
+      const img = new Image();
+      img.onload = () => setSprite({ w: img.naturalWidth, h: img.naturalHeight });
+      img.src = spriteUrl;
+    }
+    setScrub(Math.min(0.999, Math.max(0, (event.clientX - box.left) / box.width)));
+  }
+
+  const frames = sprite !== null && sprite !== "none" ? sprite : null;
+  const scrubbing = scrub !== null && frames !== null;
+  const tile = scrubbing ? Math.floor(scrub * 100) : 0;
   const [destination, setDestination] = useState(video.folderId ?? ROOT);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -219,7 +252,11 @@ export function VideoCard({
   }
 
   return (
-    <div className="group relative overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong">
+    <div
+      onPointerMove={onScrub}
+      onPointerLeave={() => setScrub(null)}
+      className="group relative overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong"
+    >
       {/* Le lien couvre la carte, aperçu compris. Il était en `z-0`, donc
           en dessous du conteneur de vignette qui le suit dans le DOM : un
           clic sur l'image, le geste le plus naturel, ne faisait rien, et
@@ -231,7 +268,7 @@ export function VideoCard({
         aria-label={`Ouvrir ${video.name}`}
       />
 
-      <div className="relative aspect-video overflow-hidden bg-black">
+      <div ref={thumbRef} className="relative aspect-video overflow-hidden bg-black">
         {thumbBroken ? (
           /* La marque en filigrane plutôt qu'une phrase seule au milieu du
              noir : c'est une amorce vierge, pas une erreur. Et le logo est
@@ -251,10 +288,41 @@ export function VideoCard({
           />
         )}
 
+        {scrub !== null && frames !== null && (
+          <>
+            {/* L'image garde son rapport : une verticale reste verticale,
+                centrée sur le noir, au lieu d'être étirée en 16:9. */}
+            <span aria-hidden className="absolute inset-0 grid place-items-center bg-black">
+              <span
+                className="block max-h-full max-w-full"
+                style={{
+                  aspectRatio: `${frames.w} / ${frames.h}`,
+                  ...(frames.w / frames.h >= 16 / 9 ? { width: "100%" } : { height: "100%" }),
+                  backgroundImage: `url(${spriteUrl})`,
+                  backgroundSize: "1000% 1000%",
+                  backgroundPosition: `${((tile % 10) / 9) * 100}% ${(Math.floor(tile / 10) / 9) * 100}%`,
+                }}
+              />
+            </span>
+            {/* Où on en est dans le film : le même trait que la tête de
+                lecture, pour qu'on comprenne le geste sans l'expliquer. */}
+            <span
+              aria-hidden
+              className="neon absolute inset-y-0 w-0.5 -translate-x-1/2 bg-accent"
+              style={{ left: `${scrub * 100}%` }}
+            />
+          </>
+        )}
+
         {/* Une durée est un timecode : elle mérite l'afficheur de
-            l'appareil, pas une pastille noire quelconque. */}
-        <span className="tc-plate absolute bottom-1.5 right-1.5 !px-1.5 !py-0.5 text-[11px] text-fg-dim">
-          {formatClock(video.duration ?? 0)}
+            l'appareil, pas une pastille noire quelconque. Pendant le
+            parcours, elle donne l'instant survolé. */}
+        <span
+          className={`tc-plate absolute bottom-1.5 right-1.5 !px-1.5 !py-0.5 text-[11px] ${
+            scrubbing ? "text-accent" : "text-fg-dim"
+          }`}
+        >
+          {formatClock(scrub !== null && frames !== null ? scrub * (video.duration ?? 0) : (video.duration ?? 0))}
         </span>
 
         {/* Le fichier n'est pas encore lisible, ou ne le sera pas : on le dit

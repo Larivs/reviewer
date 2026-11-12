@@ -327,7 +327,7 @@ body {
      repères. La liste des raccourcis, elle, a le droit de tomber sous le
      bord : on ne la consulte pas en regardant un plan. */
   .player-picture {
-    max-height: max(15rem, calc(100dvh - 13.75rem));
+    max-height: max(15rem, calc(100dvh - 17rem));
   }
 
   /* ── Nappe froide ─────────────────────────────────────────────────────
