@@ -88,7 +88,7 @@ import { timelineTimecode, toCsv, toEdl, toText } from "../src/lib/export.ts";
 const note = (over: object) => ({
   id: "c", videoId: "v", userId: "u", authorName: "Hugo", authorColor: 0,
   timecode: 4, timecodeEnd: null, annotation: null, body: "Logo trop tôt",
-  resolved: false, createdAt: 0, replies: [], ...over,
+  resolved: false, createdAt: 0, replies: [], mentions: [], internal: false, number: 1, ...over,
 });
 
 test("export : timecode de timeline, départ à une heure, cadence entière", () => {
@@ -125,4 +125,53 @@ test("export : texte", () => {
   const txt = toText("Montage", [note({ resolved: true, replies: [{ authorName: "Toma", body: "fait" }] })], 25);
   assert.match(txt, /^Montage\n1 note\(s\), 0 ouverte\(s\)\n/);
   assert.match(txt, /#1  00:00:04:00  Hugo  \[résolue\]\n    Logo trop tôt\n    ↳ Toma : fait/);
+});
+
+// ── Mentions ────────────────────────────────────────────────────────────
+import { findMentions, splitMentions } from "../src/lib/mentions.ts";
+
+test("mentions : le plus long nom connu l'emporte", () => {
+  const names = ["Toma", "Toma (2)", "Jean-Paul", "Hugo"];
+  assert.deepEqual(findMentions("@Toma (2) regarde ça", names), ["Toma (2)"]);
+  assert.deepEqual(findMentions("@toma et @Jean-Paul, vu ?", names), ["Toma", "Jean-Paul"]);
+  assert.deepEqual(findMentions("@Hugo @Hugo", names), ["Hugo"]);
+});
+
+test("mentions : ce qui n'en est pas", () => {
+  const names = ["Toma", "Hugo"];
+  assert.deepEqual(findMentions("@Tomate, écrire à hugo@studio.fr", names), []);
+  assert.deepEqual(findMentions("@Inconnu", names), []);
+  assert.deepEqual(findMentions("", names), []);
+});
+
+test("mentions : découpage pour l'affichage", () => {
+  assert.deepEqual(splitMentions("Vu @Hugo, merci", ["Hugo"]), [
+    { text: "Vu ", mention: false },
+    { text: "@Hugo", mention: true },
+    { text: ", merci", mention: false },
+  ]);
+  assert.deepEqual(splitMentions("rien", ["Hugo"]), [{ text: "rien", mention: false }]);
+});
+
+// ── Export Premiere ─────────────────────────────────────────────────────
+import { toPremiereXml } from "../src/lib/export.ts";
+
+test("export Premiere : marqueurs en images depuis le début de la séquence", () => {
+  const out = toPremiereXml("Montage v2", [
+    note({ number: 1 }),
+    note({ number: 3, timecode: 12, timecodeEnd: 18, resolved: true, body: "a < b & c",
+      replies: [{ authorName: "Toma", body: "fait" }] }),
+  ], 25, 72);
+  assert.match(out, /^<\?xml version="1.0" encoding="UTF-8"\?>\n<!DOCTYPE xmeml>\n<xmeml version="4">/);
+  assert.match(out, /<name>Montage v2 \(notes\)<\/name>\n    <duration>1800<\/duration>/);
+  assert.match(out, /<timebase>25<\/timebase><ntsc>FALSE<\/ntsc>/);
+  // Ponctuelle : sortie à -1. Plage : sa dernière image.
+  assert.match(out, /<name>#1 Hugo<\/name>\n      <comment>Logo trop tôt<\/comment>\n      <in>100<\/in>\n      <out>-1<\/out>/);
+  assert.match(out, /<name>#3 Hugo \(résolue\)<\/name>\n      <comment>a &lt; b &amp; c\nToma : fait<\/comment>\n      <in>300<\/in>\n      <out>450<\/out>/);
+});
+
+test("export Premiere : cadences NTSC sur leur base entière", () => {
+  const out = toPremiereXml("x", [note({ timecode: 240 / 23.976 })], 23.976, 60);
+  assert.match(out, /<timebase>24<\/timebase><ntsc>TRUE<\/ntsc>/);
+  assert.match(out, /<in>240<\/in>/);
 });

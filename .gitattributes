@@ -1,0 +1,4 @@
+# Un fichier .cmd en fins de ligne Unix ne trouve plus ses etiquettes :
+# cmd.exe saute au mauvais endroit ou echoue. On le garde tel quel, en CRLF,
+# pour qu il arrive intact meme par un ZIP telecharge depuis GitHub.
+Reviewer.cmd -text

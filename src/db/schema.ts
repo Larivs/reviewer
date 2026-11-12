@@ -34,6 +34,8 @@ export const users = sqliteTable("users", {
    * que son cookie de session, lui, n'a pas expiré.
    */
   invitedVia: text("invited_via"),
+  /** Où prévenir ce compte par courriel. Vide : il n'est pas prévenu. */
+  email: text("email"),
   createdAt: integer("created_at").notNull(),
 });
 
@@ -54,9 +56,8 @@ export const users = sqliteTable("users", {
  * seule vidéo est le geste le plus courant, « voilà le montage », et un
  * lien vers un projet sert au client récurrent qui suivra les versions.
  *
- * Pas de mot de passe et pas de journal d'accès : le choix assumé est la
- * friction zéro, avec l'expiration pour seul garde-fou. Supprimer la ligne
- * révoque le lien.
+ * Le choix assumé est la friction zéro, avec l'expiration pour garde-fou.
+ * Le mot de passe est facultatif. Supprimer la ligne révoque le lien.
  */
 export const shareLinks = sqliteTable(
   "share_links",
@@ -68,6 +69,12 @@ export const shareLinks = sqliteTable(
     videoId: text("video_id"),
     /** `null` = sans expiration. */
     expiresAt: integer("expires_at"),
+    /** Empreinte argon2 du mot de passe du lien, `null` s'il n'en a pas. */
+    passwordHash: text("password_hash"),
+    /** Qui entre par ce lien peut-il télécharger le fichier d'origine ? */
+    allowDownload: integer("allow_download", { mode: "boolean" }).notNull().default(false),
+    /** Le nom du visiteur est-il affiché en filigrane sur l'image ? */
+    watermark: integer("watermark", { mode: "boolean" }).notNull().default(false),
     createdBy: text("created_by").notNull(),
     createdAt: integer("created_at").notNull(),
   },
@@ -149,6 +156,9 @@ export type VideoStatus = (typeof VIDEO_STATUSES)[number];
  * est en cours de conversion en H.264. `failed` : la conversion a échoué ou
  * le serveur s'est arrêté pendant, il n'y a rien à lire.
  */
+export const MEDIA_KINDS = ["video", "image", "audio"] as const;
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+
 export const VIDEO_STATES = ["ready", "processing", "failed"] as const;
 export type VideoState = (typeof VIDEO_STATES)[number];
 
@@ -164,6 +174,15 @@ export const videos = sqliteTable(
     fps: real("fps"),
     status: text("status").$type<VideoStatus>().notNull().default("a_review"),
     state: text("state").$type<VideoState>().notNull().default("ready"),
+    /** Ce qui a été déposé : une image ou un son sont lus comme une vidéo. */
+    kind: text("kind").$type<MediaKind>().notNull().default("video"),
+    /**
+     * Fichier d'origine gardé à côté de la copie lisible, quand il a fallu
+     * convertir. `null` : le fichier lu **est** l'original.
+     */
+    original: text("original"),
+    /** Nom du fichier tel qu'il a été déposé, rendu au téléchargement. */
+    originalName: text("original_name"),
     /**
      * Pile de versions : toutes les versions d'un même montage portent l'id
      * de la première. `null` tant qu'il n'y en a qu'une, pour que la grande
@@ -192,6 +211,11 @@ export const comments = sqliteTable(
     /** Formes dessinées sur l'image, en JSON. Coordonnées normalisées. */
     annotation: text("annotation"),
     body: text("body").notNull(),
+    /**
+     * Note interne : entre gens du studio. Un invité ne la voit pas, ni ses
+     * réponses, ni son repère sur la piste, ni dans un export.
+     */
+    internal: integer("internal", { mode: "boolean" }).notNull().default(false),
     resolved: integer("resolved", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at").notNull(),
   },
@@ -213,4 +237,28 @@ export const commentReplies = sqliteTable(
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("comment_replies_comment_idx").on(t.commentId, t.createdAt)],
+);
+
+export const LINK_EVENTS = ["joined", "viewed", "commented", "downloaded"] as const;
+export type LinkEventType = (typeof LINK_EVENTS)[number];
+
+/**
+ * Ce qui s'est passé par un lien : qui est entré, a regardé, commenté,
+ * téléchargé. Le studio envoie un lien et ne savait pas, ensuite, si le
+ * client l'avait seulement ouvert.
+ *
+ * Le nom est recopié dans la ligne : le journal doit rester lisible après la
+ * suppression du compte invité. Les lignes partent avec le lien.
+ */
+export const shareLinkEvents = sqliteTable(
+  "share_link_events",
+  {
+    id: text("id").primaryKey(),
+    linkId: text("link_id").notNull(),
+    type: text("type").$type<LinkEventType>().notNull(),
+    name: text("name").notNull(),
+    videoId: text("video_id"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("share_link_events_link_idx").on(t.linkId, t.createdAt)],
 );

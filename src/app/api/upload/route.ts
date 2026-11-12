@@ -7,11 +7,15 @@ import { after } from "next/server";
 import { getViewer, isStaff, type Viewer } from "@/lib/access";
 import { getFolder } from "@/lib/folders";
 import {
+  audioToVideo,
   enqueueMediaJob,
+  isAudioOnly,
+  isStillImage,
   makeSprite,
   makeThumbnail,
   playbackProblem,
   probe,
+  stillToVideo,
   transcode,
 } from "@/lib/media";
 import { notifyFolderChanged } from "@/lib/live";
@@ -23,8 +27,8 @@ import {
   MAX_UPLOAD_BYTES,
   partPath,
   safeExtension,
+  originalFilename,
   setVideoState,
-  sourcePath,
   spritePath,
   thumbnailPath,
   videoPath,
@@ -34,6 +38,11 @@ import {
 export const dynamic = "force-dynamic";
 /** Le corps est écrit au fil de l'eau : jamais de fichier entier en mémoire. */
 export const runtime = "nodejs";
+
+/** Le nom déposé, sans chemin et borné, pour le rendre au téléchargement. */
+function displayFileName(name: string) {
+  return name.replace(/^.*[\\/]/, "").slice(0, 200);
+}
 
 function fail(message: string, status = 400, extra: object = {}) {
   return Response.json({ error: message, ...extra }, { status });
@@ -166,24 +175,31 @@ async function finalize({
     media = await probe(part);
   } catch {
     await unlink(part).catch(() => {});
-    return fail("Fichier illisible : ce n'est pas une vidéo valide.");
+    return fail("Fichier illisible : ni une vidéo, ni une image, ni un son.");
   }
-  if (!media.videoCodec) {
+  if (!media.videoCodec && !media.audioCodec) {
     await unlink(part).catch(() => {});
-    return fail("Ce fichier ne contient pas de piste vidéo.", 415);
+    return fail("Ce fichier ne contient ni image ni son.", 415);
   }
 
+  const kind = isStillImage(media) ? "image" : isAudioOnly(media) ? "audio" : "video";
+
   // Ce que le navigateur ne lit pas n'est plus refusé : on en fait un proxy
-  // H.264. La vidéo existe tout de suite, marquée « en conversion ».
-  const needsTranscode = playbackProblem(media) !== null;
+  // H.264. La vidéo existe tout de suite, marquée « en conversion ». Une
+  // image ou un son passent toujours par là, voir `lib/media`.
+  const needsTranscode = kind !== "video" || playbackProblem(media) !== null;
   const id = randomUUID();
   const filename = `${id}.${needsTranscode ? "mp4" : safeExtension(originalName)}`;
   const final = videoPath(filename);
-  const source = sourcePath(id);
+  // L'original est gardé à côté de sa copie : c'est lui qu'on télécharge.
+  const original = needsTranscode ? originalFilename(id, originalName) : null;
+  const source = videoPath(original ?? filename);
 
   // Ni la vignette ni la planche d'aperçu ne sont bloquantes : sans elles
-  // la carte affiche un repère neutre et la piste n'a pas de survol.
-  await makeThumbnail(part, thumbnailPath(id), media.duration).catch(() => {});
+  // la carte affiche un repère neutre et la piste n'a pas de survol. Pour une
+  // image ou un son, la vignette est tirée de la copie, une fois faite.
+  if (kind === "video")
+    await makeThumbnail(part, thumbnailPath(id), media.duration).catch(() => {});
 
   const row = {
     id,
@@ -192,10 +208,14 @@ async function finalize({
     name: base ? base.name : displayName(originalName),
     filename,
     size,
-    duration: media.duration,
-    fps: media.fps,
+    // Une image dure la seconde de vidéo qu'on en fait.
+    duration: kind === "image" ? 1 : media.duration,
+    fps: kind === "video" ? media.fps : null,
     status: "a_review" as const,
     state: needsTranscode ? ("processing" as const) : ("ready" as const),
+    kind: kind as "video" | "image" | "audio",
+    original,
+    originalName: displayFileName(originalName),
     uploadedBy: user.id,
     createdAt: Date.now(),
   };
@@ -220,19 +240,33 @@ async function finalize({
       if (needsTranscode) {
         const draft = `${final}.tmp`;
         try {
-          await transcode(source, draft);
+          if (kind === "image") await stillToVideo(source, draft);
+          else if (kind === "audio") await audioToVideo(source, draft);
+          else {
+            await transcode(source, draft);
+            // ffmpeg peut sortir en « succès » sur une source abîmée, avec
+            // une copie qui s'arrête au milieu. On la découvrait à la
+            // lecture : on compare les durées, et on refuse plus d'une
+            // seconde ou 2 % d'écart.
+            const made = (await probe(draft)).duration;
+            if (media.duration !== null && made !== null) {
+              const gap = Math.abs(media.duration - made);
+              if (gap > Math.max(1, media.duration * 0.02)) throw new Error("TRONQUEE");
+            }
+          }
           await rename(draft, final);
+          if (kind !== "video")
+            await makeThumbnail(final, thumbnailPath(id), row.duration).catch(() => {});
           setVideoState(id, "ready", (await stat(final)).size);
         } catch {
           setVideoState(id, "failed");
           await unlink(draft).catch(() => {});
           return;
         } finally {
-          await unlink(source).catch(() => {});
           notifyFolderChanged();
         }
       }
-      await makeSprite(final, spritePath(id), media.duration);
+      await makeSprite(final, spritePath(id), row.duration);
     }),
   );
 

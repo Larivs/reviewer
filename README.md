@@ -30,10 +30,17 @@ aucun contenu client.</sub>
   écrire une seconde au même endroit.
 - **Versions.** v1, v2, v3 d'un même montage sur une seule vignette, chacune
   avec ses notes, et une comparaison synchronisée, côte à côte ou en volet.
-- **Export des notes.** En marqueurs pour DaVinci Resolve (EDL), en CSV, ou en
-  texte à coller dans un message.
+- **Export des notes.** En séquence à marqueurs pour Premiere Pro (XML), en
+  marqueurs pour DaVinci Resolve (EDL), en CSV, ou en texte.
+- **Notes internes.** Une note cochée « interne » reste entre gens du studio :
+  le client d'un lien ne la voit pas.
+- **Journal par lien.** Qui est entré, a regardé, commenté, téléchargé.
 - **En direct.** Les notes des autres arrivent sans recharger, et on voit qui
   regarde la vidéo en même temps.
+- **Images et sons aussi.** Une image fixe ou une piste audio se déposent
+  comme une vidéo et se commentent pareil ; le son s'affiche en forme d'onde.
+- **Mentions.** `@Prénom` dans une note prévient la personne, par courriel si
+  son compte a une adresse.
 - **Trois rôles.** Admin, membre, invité. Un invité ne voit que les projets
   qu'on lui ouvre.
 - **Liens de review.** Un lien par vidéo ou par projet, avec expiration, à
@@ -59,24 +66,67 @@ aucun contenu client.</sub>
 
 ## Installation
 
-Il faut **Node 22.18 ou plus** : les scripts et les tests exécutent le
-TypeScript directement. Rien d'autre : ffmpeg et SQLite sont embarqués.
+Sur une machine neuve, trois étapes. Rien d'autre à installer : ffmpeg et
+SQLite sont embarqués, la base se crée toute seule.
+
+**1. Installer Node.js**, version 22.18 ou plus : la version LTS de
+[nodejs.org](https://nodejs.org), ou `winget install OpenJS.NodeJS.LTS` sous
+Windows.
+
+**2. Récupérer le projet.** Avec git :
 
 ```bash
 git clone https://github.com/Larivs/reviewer.git
-cd reviewer
-npm install
-npm run serve
 ```
 
-Puis ouvrir l'adresse affichée au démarrage. **Au premier lancement, l'app
-propose de créer le compte administrateur**, c'est toi. Cette page ne
-s'affiche que tant qu'aucun compte n'existe, et disparaît dès que le premier
-est créé.
+Sans git : le bouton **Code, Download ZIP** de la page GitHub, à décompresser
+où tu veux. Évite un dossier synchronisé (OneDrive, Dropbox) : la base y
+serait copiée pendant qu'elle est écrite.
+
+**3. Lancer.**
+
+- **Windows** : double-clic sur `Reviewer.cmd`. La première fois il installe
+  les dépendances (quelques minutes), compile, puis démarre. Les fois
+  suivantes il démarre directement, et il réinstalle de lui-même après une
+  mise à jour.
+- **macOS, Linux** :
+
+  ```bash
+  cd reviewer
+  npm ci
+  npm run serve
+  ```
+
+Ouvre ensuite l'adresse affichée. **Au premier lancement, l'app propose de
+créer le compte administrateur**, c'est toi. Cette page ne s'affiche que tant
+qu'aucun compte n'existe, et disparaît dès que le premier est créé.
+
+Pour que d'autres postes s'y connectent, voir
+[Accès depuis un autre poste](#accès-depuis-un-autre-poste) : pare-feu,
+adresse fixe, mise en veille.
+
+### Mettre à jour
+
+```bash
+git pull
+```
+
+Puis relancer `Reviewer.cmd` (ou `npm ci && npm run serve`). La base se met à
+niveau au démarrage, après en avoir gardé une copie dans `data/sauvegardes/`.
+
+### Déménager vers une autre machine
+
+Tout ce qui t'appartient est dans le dossier `data/`. Serveur **arrêté**,
+copie ce dossier dans le projet installé sur la nouvelle machine, puis lance.
+Comptes, projets, vidéos et notes suivent. Serveur en marche, passe par
+`npm run backup` (voir [Sauvegarde](#sauvegarde)) : une copie à la main
+perdrait les dernières notes.
+
+### Ce que fait le lancement
 
 `npm run serve` est le mode **production**, celui dans lequel l'app doit
-tourner dès qu'une autre personne s'y connecte. Sur Windows, un double-clic sur
-`Reviewer.cmd` fait la même chose et laisse la fenêtre ouverte.
+tourner dès qu'une autre personne s'y connecte. `Reviewer.cmd` l'appelle et
+laisse la fenêtre ouverte.
 
 Le script fait trois choses que `next start` ne fait pas, et ce sont les trois
 qu'on oublie au mauvais moment :
@@ -123,6 +173,11 @@ ou sur un projet, produit un lien à envoyer :
 ```
 https://ton-serveur/r/KT2E-QEF7-26XX-ZU93-4UD3
 ```
+
+Trois réglages facultatifs à la création : un **mot de passe**, le droit de
+**télécharger le fichier d'origine**, et un **filigrane** au nom du visiteur
+sur l'image. Le filigrane dissuade et signe une capture d'écran ; il ne
+protège pas le fichier, qui reste lisible par qui a le lien.
 
 Qui l'ouvre donne son prénom, pour signer ses notes, pas pour s'identifier -
 et commente immédiatement. Le lien porte une date d'expiration choisie à sa
@@ -238,6 +293,10 @@ Tout est dans `data/`, ignoré par git :
 - `data/thumbs/`, les vignettes générées
 - `data/sprites/`, les planches d'aperçu au survol
 
+Avant de modifier une table, l'app en garde une copie dans
+`data/sauvegardes/avant-migration-<date>.db`. Elle ne remplace pas
+`npm run backup`, qui sauvegarde aussi les médias.
+
 Il n'y a pas de dossier de migrations : le schéma est appliqué au démarrage,
 de façon idempotente, et les colonnes ajoutées après coup passent par un
 `ALTER` explicite. Mettre à jour, c'est `git pull && npm install && npm run
@@ -285,12 +344,14 @@ en H.264 / AAC** après l'envoi. La vidéo apparaît tout de suite, marquée « 
 conversion », et s'ouvre d'elle-même quand la copie est prête. Deux choses à
 savoir :
 
-- c'est un **proxy de review**, pas un master : l'original n'est pas conservé
-  une fois la copie produite ;
+- l'**original est gardé** à côté de la copie, c'est lui que rend le bouton
+  « Télécharger ». Un fichier converti occupe donc deux fois sa place ;
 - la conversion occupe le processeur de la machine hôte, une vidéo à la fois.
   Un long métrage en ProRes prend plusieurs minutes.
 
-Un fichier sans piste vidéo, ou illisible, reste refusé.
+Une **image fixe** devient une seconde de vidéo, un **son** une vidéo de sa
+forme d'onde : les deux passent ainsi par le même lecteur, avec annotations,
+versions et comparaison. Les PDF ne sont pas pris en charge.
 
 ### Note Windows
 
@@ -308,14 +369,17 @@ Autant les dire ici plutôt que les faire découvrir :
   règlent (voir `.env.example`).
 - **Un seul espace par instance.** Pas de multi-tenant : chaque studio fait
   tourner la sienne. C'est un choix, pas un manque.
-- **Les notes ne suivent pas d'une version à l'autre.** Chaque version a les
-  siennes, c'est voulu ; il n'y a pas de report automatique.
+- **Les notes ne suivent pas toutes seules d'une version à l'autre.** Un
+  bouton reporte les notes encore ouvertes ; c'est un geste, pas un automatisme.
 - **On ne supprime pas une version seule.** La corbeille de la vignette
   emporte toute la pile.
-- **Notifications par webhook seulement** (`REVIEWER_WEBHOOK_URL`, Slack ou
-  Discord). Pas de courriel.
-- **L'export EDL vise DaVinci Resolve.** Premiere n'importe pas de marqueurs
-  sans extension tierce ; le CSV est là pour ça.
+- **Pas d'application native.** L'app web s'installe sur l'écran d'accueil
+  d'un téléphone, mais la mise en page n'a pas été reprise pour petit écran.
+- **Pas d'extension Premiere, Resolve ou After Effects**, pas de PDF, pas de
+  champs personnalisés.
+- **L'export Premiere n'a pas été ouvert dans Premiere.** Le fichier suit le
+  format XML de Final Cut Pro 7, que Premiere importe ; à essayer sur une
+  vraie séquence avant de compter dessus.
 - **Testé sur Windows et Chrome.** Le reste devrait marcher, mais n'est pas
   éprouvé au quotidien.
 
@@ -361,6 +425,9 @@ l'impasse évitée sera gardé.
 
 - Images et vidéo de fond (`public/bg/`), © Toma, diffusées sous la licence
   du projet.
+- [Inter](https://github.com/rsms/inter), sous OFL 1.1, pour tout le texte
+  courant, servie depuis le projet par le paquet `@fontsource-variable/inter`.
+  Archivo ne sert plus qu'au logotype.
 - [Archivo](https://github.com/Omnibus-Type/Archivo) et
   [IBM Plex Mono](https://github.com/IBM/plex), sous OFL 1.1. Licences et
   attribution dans [`public/fonts/licenses/`](public/fonts/licenses/).

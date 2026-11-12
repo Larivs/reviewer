@@ -193,3 +193,25 @@ async function protectLastAdmin(
     };
   return null;
 }
+
+/**
+ * Adresse à laquelle prévenir ce compte. Vide pour la retirer. Réglée par
+ * l'admin et non par chacun : il n'y a pas de page de profil, et c'est lui
+ * qui sait qui doit suivre quoi.
+ */
+export async function setAccountEmailAction(
+  userId: string,
+  rawEmail: string,
+): Promise<ActionResult> {
+  await requireAdmin();
+
+  const email = String(rawEmail).trim().slice(0, 200);
+  // Forme minimale : quelque chose, une arobase, un domaine avec un point.
+  // Le vrai test d'une adresse, c'est que le courriel arrive.
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { ok: false, error: "Cette adresse n'a pas la forme d'un courriel." };
+
+  db.update(users).set({ email: email || null }).where(eq(users.id, userId)).run();
+  refresh();
+  return { ok: true };
+}

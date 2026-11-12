@@ -11,6 +11,37 @@ export const VIDEO_DIR = path.join(DATA_DIR, "videos");
 export const THUMB_DIR = path.join(DATA_DIR, "thumbs");
 export const SPRITE_DIR = path.join(DATA_DIR, "sprites");
 
+/**
+ * Copie de la base prise juste avant la première modification de structure
+ * d'un démarrage, dans `data/sauvegardes/`.
+ *
+ * Mettre à jour, c'est `git pull` puis relancer : la base migre toute seule,
+ * et personne ne pense à sauvegarder avant. Si une migration se passe mal,
+ * le fichier d'avant est là. `VACUUM INTO` écrit une copie cohérente sans
+ * arrêter quoi que ce soit. Une base neuve, sans compte, n'a rien à garder.
+ *
+ * Pas de purge : effacer des sauvegardes de sa propre initiative est le
+ * genre de zèle qui se paie cher un jour. Une copie par mise à jour qui
+ * touche au schéma, c'est peu.
+ */
+let safetyCopyDone = false;
+function safetyCopy(sqlite: Database.Database) {
+  if (safetyCopyDone) return;
+  safetyCopyDone = true;
+  try {
+    const { n } = sqlite.prepare("SELECT count(*) AS n FROM users").get() as { n: number };
+    if (n === 0) return;
+    const dir = path.join(DATA_DIR, "sauvegardes");
+    mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const file = path.join(dir, `avant-migration-${stamp}.db`);
+    sqlite.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
+  } catch {
+    // Disque plein ou dossier interdit : on ne bloque pas le démarrage pour
+    // une copie de sûreté, `npm run backup` reste la vraie sauvegarde.
+  }
+}
+
 function ensureColumn(
   sqlite: Database.Database,
   table: string,
@@ -21,6 +52,7 @@ function ensureColumn(
     name: string;
   }[];
   if (columns.some((c) => c.name === column)) return false;
+  safetyCopy(sqlite);
   sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   return true;
 }
@@ -52,6 +84,14 @@ function connect() {
   ensureColumn(sqlite, "users", "role", "TEXT NOT NULL DEFAULT 'admin'");
   ensureColumn(sqlite, "users", "invited_via", "TEXT");
 
+  ensureColumn(sqlite, "comments", "internal", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(sqlite, "users", "email", "TEXT");
+  ensureColumn(sqlite, "share_links", "password_hash", "TEXT");
+  ensureColumn(sqlite, "share_links", "allow_download", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(sqlite, "share_links", "watermark", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(sqlite, "videos", "kind", "TEXT NOT NULL DEFAULT 'video'");
+  ensureColumn(sqlite, "videos", "original", "TEXT");
+  ensureColumn(sqlite, "videos", "original_name", "TEXT");
   ensureColumn(sqlite, "videos", "state", "TEXT NOT NULL DEFAULT 'ready'");
   ensureColumn(sqlite, "videos", "stack_id", "TEXT");
   ensureColumn(sqlite, "videos", "version", "INTEGER NOT NULL DEFAULT 1");

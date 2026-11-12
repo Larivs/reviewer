@@ -1,9 +1,10 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
-import { readVideoOr404 } from "@/lib/access";
+import { readVideoOr404, videoCapabilities } from "@/lib/access";
 import { parseRange } from "@/lib/http-range";
-import { videoPath, type Video } from "@/lib/videos";
+import { recordLinkEvent } from "@/lib/link-activity";
+import { originalPath, videoPath, type Video } from "@/lib/videos";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,8 +19,8 @@ const MIME: Record<string, string> = {
 
 type Resolved = { file: string; size: number; type: string };
 
-async function resolve(video: Video): Promise<Resolved | null> {
-  const file = videoPath(video.filename);
+async function resolve(video: Video, original = false): Promise<Resolved | null> {
+  const file = original ? originalPath(video) : videoPath(video.filename);
   try {
     const info = await stat(file);
     return {
@@ -130,8 +131,29 @@ export async function GET(
   const access = await readVideoOr404(id);
   if (access instanceof Response) return access;
 
-  const target = await resolve(access.video);
+  // `?download=1` : le fichier d'origine, en pièce jointe. Droit vérifié ici
+  // et pas seulement en masquant le bouton, l'adresse se devine.
+  const download = new URL(request.url).searchParams.get("download") === "1";
+  const can = download ? videoCapabilities(access.viewer, access.video) : null;
+  if (can && !can.download) return new Response("Introuvable", { status: 404 });
+
+  const target = await resolve(access.video, download);
   if (!target) return new Response("Introuvable", { status: 404 });
+
+  if (download) {
+    const { video } = access;
+    recordLinkEvent(can?.linkIds ?? [], "downloaded", access.viewer.name, video.id);
+    const ext = path.extname(target.file);
+    const name = video.originalName ?? `${video.name}${ext}`;
+    return new Response(fileStream(target.file, {}, request.signal), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": String(target.size),
+        "Content-Disposition": `attachment; filename="${name.replace(/[^\w .-]+/g, "_")}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
 
   const { file, size, type } = target;
   const rangeHeader = request.headers.get("range");

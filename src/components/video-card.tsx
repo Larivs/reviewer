@@ -318,7 +318,7 @@ export function VideoCard({
             l'appareil, pas une pastille noire quelconque. Pendant le
             parcours, elle donne l'instant survolé. */}
         <span
-          className={`tc-plate absolute bottom-1.5 right-1.5 !px-1.5 !py-0.5 text-[11px] ${
+          className={`tc-plate absolute bottom-1.5 right-1.5 !px-1.5 !py-0.5 text-xs ${
             scrubbing ? "text-accent" : "text-fg-dim"
           }`}
         >
@@ -335,10 +335,16 @@ export function VideoCard({
           </span>
         )}
 
+        {video.kind !== "video" && video.state === "ready" && (
+          <span className="tc-plate absolute right-1.5 top-1.5 !px-1.5 !py-0.5 text-xs text-fg-dim">
+            {video.kind === "image" ? "Image" : "Son"}
+          </span>
+        )}
+
         {video.versionCount > 1 && (
           <span
             title={`${video.versionCount} versions, celle-ci est la dernière`}
-            className="tc-plate absolute bottom-1.5 left-1.5 !px-1.5 !py-0.5 text-[11px] text-accent"
+            className="tc-plate absolute bottom-1.5 left-1.5 !px-1.5 !py-0.5 text-xs text-accent"
           >
             v{video.version}
           </span>
@@ -353,7 +359,7 @@ export function VideoCard({
                signal se noyait dans le motif. Le cerne la détache de
                n'importe quel fond sans lui retirer son aplat, et c'est
                l'aplat qui dit « ça demande attention ». */
-            className="absolute left-1.5 top-1.5 rounded-sm bg-accent px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-accent-fg ring-1 ring-bg/70"
+            className="absolute left-1.5 top-1.5 rounded-sm bg-accent px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums text-accent-fg ring-1 ring-bg/70"
           >
             {video.openComments}
           </span>

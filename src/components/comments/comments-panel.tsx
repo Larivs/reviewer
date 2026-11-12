@@ -27,6 +27,9 @@ type Props = {
   currentUserId: string;
   /** Qui a la vidéo ouverte en ce moment, soi compris. */
   viewers: Viewer[];
+  /** Noms proposés après un `@`. */
+  people: string[];
+  canInternal: boolean;
   currentTime: number;
   /** Note sous la tête de lecture, calculée par l'espace de review. */
   activeId: string | null;
@@ -52,6 +55,8 @@ export function CommentsPanel({
   comments,
   currentUserId,
   viewers,
+  people,
+  canInternal,
   currentTime,
   activeId,
   getPreciseTime,
@@ -81,7 +86,7 @@ export function CommentsPanel({
    * filtrent pas pareil ne parlent plus de la même chose.
    */
   const ranks = useMemo(
-    () => new Map(comments.map((comment, i) => [comment.id, i + 1])),
+    () => new Map(comments.map((comment) => [comment.id, comment.number])),
     [comments],
   );
 
@@ -195,6 +200,7 @@ export function CommentsPanel({
           Exporter
           {(
             [
+              ["xml", "Premiere", "Séquence à importer dans Premiere Pro, une note par marqueur"],
               ["edl", "Resolve", "Marqueurs de timeline pour DaVinci Resolve (EDL)"],
               ["csv", "CSV", "Tableau, s'ouvre dans Excel"],
               ["txt", "Texte", "À coller dans un message ou à imprimer"],
@@ -217,6 +223,8 @@ export function CommentsPanel({
         <CommentForm
           videoId={videoId}
           fps={fps}
+          people={people}
+          canInternal={canInternal}
           currentTime={currentTime}
           getPreciseTime={getPreciseTime}
           onFocusCapture={onFormFocus}
@@ -251,7 +259,7 @@ export function CommentsPanel({
                 type="button"
                 aria-selected={view === key}
                 onClick={() => setView(key)}
-                className={`label !tracking-[0.1em] px-2 py-1 transition-colors ${
+                className={`label px-2.5 py-1 transition-colors ${
                   view === key
                     ? "bg-accent/15 !text-accent"
                     : "hover:bg-surface-2 hover:!text-fg-dim"
@@ -277,7 +285,7 @@ export function CommentsPanel({
                     aria-pressed={on}
                     onClick={() => toggleAuthor(author.id)}
                     title={on ? `Masquer ${author.name}` : `Afficher ${author.name}`}
-                    className="rounded-sm border px-1.5 py-0.5 font-mono text-[10px] tracking-[0.06em] transition-all"
+                    className="rounded-sm border px-1.5 py-0.5 text-xs font-medium transition-all"
                     style={{
                       color: on ? hex : "var(--color-muted)",
                       borderColor: on

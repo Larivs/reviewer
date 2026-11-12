@@ -10,6 +10,10 @@ import type { Range } from "../player/timeline";
 type Props = {
   videoId: string;
   fps: number | null;
+  /** Noms proposés après un `@`. */
+  people: string[];
+  /** Affiche la case « note interne », pour le studio seulement. */
+  canInternal: boolean;
   /** Position affichée : rafraîchie à cadence réduite, suffisante à l'œil. */
   currentTime: number;
   /**
@@ -36,6 +40,8 @@ type Props = {
 export function CommentForm({
   videoId,
   fps,
+  people,
+  canInternal,
   currentTime,
   getPreciseTime,
   onFocusCapture,
@@ -51,6 +57,7 @@ export function CommentForm({
 }: Props) {
   const [body, setBody] = useState("");
   const [pinned, setPinned] = useState<number | null>(null);
+  const [internal, setInternal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -84,6 +91,30 @@ export function CommentForm({
     setError(null);
   }
 
+  /**
+   * Mention en cours de frappe : ce qui suit le dernier `@` avant le curseur,
+   * tant qu'on n'a pas tapé d'espace. On propose alors les personnes dont le
+   * nom commence ainsi ; Tab ou un clic complète.
+   */
+  const [caret, setCaret] = useState(0);
+  const typed = /(^|\s)@([^\s@]*)$/.exec(body.slice(0, caret));
+  const suggestions = typed
+    ? people.filter((name) => name.toLowerCase().startsWith(typed[2].toLowerCase())).slice(0, 5)
+    : [];
+
+  function complete(name: string) {
+    if (!typed) return;
+    const start = caret - typed[2].length;
+    const next = `${body.slice(0, start)}${name} ${body.slice(caret)}`;
+    setBody(next);
+    const position = start + name.length + 1;
+    setCaret(position);
+    requestAnimationFrame(() => {
+      areaRef.current?.focus();
+      areaRef.current?.setSelectionRange(position, position);
+    });
+  }
+
   function clearRange() {
     onRangeChange(null);
     onRangeArmedChange(false);
@@ -102,11 +133,15 @@ export function CommentForm({
         timecodeEnd: until,
         body,
         annotation: shapes,
+        internal,
       });
 
       if (result.ok) {
         setBody("");
         setPinned(null);
+        // Chaque note se décide : rester coché ferait partir la suivante en
+        // interne par oubli, et le client ne verrait pas ce qu'on lui écrit.
+        setInternal(false);
         setError(null);
         clearRange();
         onDraftChange(null);
@@ -134,7 +169,7 @@ export function CommentForm({
              lisaient comme deux notes, et on cherchait laquelle était le
              début. La durée est là parce que c'est elle qu'on juge, « trois
              secondes » parle, « de 0:04 à 0:07 » demande une soustraction. */
-          <span className="flex items-center gap-1.5 rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-[11px] tabular-nums tracking-[0.02em] text-accent">
+          <span className="flex items-center gap-1.5 rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-xs tabular-nums tracking-[0.02em] text-accent">
             {formatTimecode(range.start, fps)}
             <span aria-hidden className="opacity-60">
               →
@@ -152,7 +187,7 @@ export function CommentForm({
             </button>
           </span>
         ) : (
-          <span className="rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-[11px] tabular-nums tracking-[0.02em] text-accent">
+          <span className="rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-xs tabular-nums tracking-[0.02em] text-accent">
             {formatTimecode(timecode, fps)}
           </span>
         )}
@@ -162,7 +197,7 @@ export function CommentForm({
             type="button"
             onClick={pin}
             title={`Recaler sur ${formatTimecode(currentTime, fps)}`}
-            className="rounded-sm border border-status-doing/40 bg-status-doing/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-status-doing transition-colors hover:bg-status-doing/20"
+            className="rounded-sm border border-status-doing/40 bg-status-doing/10 px-1.5 py-0.5 text-xs font-medium text-status-doing transition-colors hover:bg-status-doing/20"
           >
             ≠ lecture · recaler
           </button>
@@ -174,9 +209,18 @@ export function CommentForm({
       <textarea
         ref={areaRef}
         value={body}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => {
+          handleChange(e.target.value);
+          setCaret(e.target.selectionStart);
+        }}
+        onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
         onFocus={onFocusCapture}
         onKeyDown={(e) => {
+          if (e.key === "Tab" && suggestions.length > 0) {
+            e.preventDefault();
+            complete(suggestions[0]);
+            return;
+          }
           // Entrée insère un retour à la ligne : une note de review est
           // souvent une petite liste. Ctrl+Entrée envoie.
           if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -188,6 +232,27 @@ export function CommentForm({
         placeholder="Note à ce timecode…"
         className="field mt-2 resize-y !bg-surface"
       />
+
+      {suggestions.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <span className="label">Mentionner</span>
+          {suggestions.map((name, i) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => complete(name)}
+              className={`rounded-sm border px-1.5 py-0.5 text-xs transition-colors ${
+                i === 0
+                  ? "border-accent-dim bg-accent/12 text-accent"
+                  : "border-line text-fg-dim hover:border-line-strong"
+              }`}
+            >
+              @{name}
+            </button>
+          ))}
+          <span className="meta">Tab</span>
+        </div>
+      )}
 
       {draft && (
         <div className="mt-1.5 flex items-center gap-2">
@@ -210,6 +275,22 @@ export function CommentForm({
           Glisse sur la piste, du début à la fin de ce que tu commentes.
           L&apos;image suit pendant le geste.
         </p>
+      )}
+
+      {canInternal && (
+        <label
+          className={`mt-2 flex items-center gap-2 text-xs ${
+            internal ? "text-status-doing" : "text-muted"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={internal}
+            onChange={(e) => setInternal(e.target.checked)}
+            className="accent-[var(--color-status-doing)]"
+          />
+          Note interne, invisible pour les clients
+        </label>
       )}
 
       {error && (
@@ -259,7 +340,7 @@ export function CommentForm({
         </button>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="rounded-sm border border-line bg-surface-3 px-1.5 py-0.5 font-mono text-[10px] text-muted">
+          <span className="rounded-sm border border-line bg-surface-3 px-1.5 py-0.5 font-mono text-[11px] text-muted">
             Ctrl + Entrée
           </span>
           <button

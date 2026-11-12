@@ -29,7 +29,7 @@ export function UserChip({
   shrink?: boolean;
 }) {
   const { hex, label } = userColor(colorIndex);
-  const box = size === "md" ? "size-5 text-[10px]" : "size-4 text-[9px]";
+  const box = size === "md" ? "size-5 text-[11px]" : "size-4 text-[9px]";
 
   return (
     <span

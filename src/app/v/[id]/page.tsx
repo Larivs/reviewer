@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireVideoView } from "@/lib/access";
+import { requireVideoView, videoCapabilities } from "@/lib/access";
 import { userColorIndex } from "@/lib/users";
 import { listVersions } from "@/lib/videos";
 import { getBreadcrumb } from "@/lib/folders";
-import { listComments } from "@/lib/comments";
+import { countOpenComments, listComments } from "@/lib/comments";
 import { AppHeader } from "@/components/app-header";
 import { Tour } from "@/components/tour/tour";
 import { REVIEW_TOUR } from "@/components/tour/steps";
@@ -12,6 +12,7 @@ import { ReviewWorkspace } from "@/components/review-workspace";
 import { StatusPicker } from "@/components/status-picker";
 import { ShareButton } from "@/components/share-button";
 import { VersionsBar } from "@/components/versions-bar";
+import { recordLinkEvent } from "@/lib/link-activity";
 import { ProcessingNotice } from "@/components/processing-notice";
 import { isStaff } from "@/lib/access";
 import { formatSize } from "@/lib/format";
@@ -33,6 +34,19 @@ export default async function VideoPage({
   const backHref = video.folderId ? `/f/${video.folderId}` : "/";
   const backLabel = trail.length > 0 ? trail[trail.length - 1].name : "Projets";
   const versions = listVersions(video);
+  const previous = versions.filter((v) => v.version < video.version).pop();
+  const can = videoCapabilities(user, video);
+  const staff = isStaff(user);
+  const comments =
+    video.state === "ready" ? listComments(video.id, { includeInternal: staff }) : [];
+  // Journal du lien : ce visiteur a ouvert la vidéo.
+  recordLinkEvent(can.linkIds, "viewed", user.name, video.id);
+  // Qui proposer après un `@` : ceux qui ont déjà parlé sur cette vidéo, et
+  // soi-même exclu. Pas la liste des comptes, un client n'a pas à lire le
+  // nom des autres clients du studio.
+  const people = [
+    ...new Set(comments.flatMap((c) => [c.authorName, ...c.replies.map((r) => r.authorName)])),
+  ].filter((name) => name !== user.name);
 
   return (
     <>
@@ -65,6 +79,16 @@ export default async function VideoPage({
             {isStaff(user) && (
               <ShareButton target={{ kind: "video", id: video.id }} label={video.name} />
             )}
+            {can.download && video.state !== "processing" && (
+              <a
+                href={`/api/videos/${video.id}/stream?download=1`}
+                download
+                title="Télécharger le fichier d'origine"
+                className="btn btn-ghost !py-1"
+              >
+                Télécharger
+              </a>
+            )}
             <StatusPicker videoId={video.id} status={video.status} size="md" />
             {/* Fiche technique, à la manière d'un rapport de tournage. */}
             <span className="label">
@@ -78,6 +102,11 @@ export default async function VideoPage({
           versions={versions.map((v) => ({ id: v.id, version: v.version, createdAt: v.createdAt }))}
           currentId={video.id}
           canManage={isStaff(user)}
+          carry={
+            previous
+              ? { fromVersion: previous.version, open: countOpenComments(previous.id) }
+              : null
+          }
         />
 
         {video.state === "ready" ? (
@@ -88,7 +117,16 @@ export default async function VideoPage({
             videoId={video.id}
             duration={video.duration}
             fps={video.fps}
-            comments={listComments(video.id)}
+            comments={comments}
+            people={people}
+            canInternal={staff}
+            // Le nom et la date, pas un identifiant : c'est fait pour être lu
+            // par celui qui filmerait son écran.
+            watermark={
+              can.watermark
+                ? `${user.name}  ${new Date().toLocaleDateString("fr-FR")}`
+                : null
+            }
             currentUserId={user.id}
             currentUserColor={userColorIndex(user.id)}
           />

@@ -3,11 +3,12 @@ const SHORTCUTS: [string, string][] = [
   ["← / →", "Une image en arrière ou en avant"],
   ["Maj + ← / →", "Une seconde en arrière ou en avant"],
   [", / .", "Une image (convention des logiciels de montage)"],
-  ["J / L", "Une seconde en arrière ou en avant"],
+  ["J / L", "Navette arrière ou avant, chaque appui double la vitesse"],
+  ["I / O / X", "Poser l'entrée ou la sortie de boucle, les retirer"],
   ["0 - 9", "Aller à 0 %, 10 %… de la vidéo"],
   ["Début / Fin", "Aller au début ou à la fin"],
   ["M", "Couper ou rétablir le son"],
-  ["R", "Lecture en boucle"],
+  ["R", "Lecture en boucle ; un clic sur une note boucle jusqu'à la suivante"],
   ["Ctrl + molette", "Zoomer dans l'image, puis glisser pour recadrer"],
   ["Alt + clic sur la piste", "Viser au pixel, sans aimantation aux notes"],
   ["F", "Plein écran"],
@@ -25,7 +26,7 @@ export function ShortcutsHelp() {
       <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
         {SHORTCUTS.map(([keys, label]) => (
           <div key={keys} className="flex items-baseline justify-between gap-3">
-            <dt className="shrink-0 rounded-sm border border-line bg-surface-3 px-1.5 py-0.5 font-mono text-[11px] text-fg-dim">
+            <dt className="shrink-0 rounded-sm border border-line bg-surface-3 px-1.5 py-0.5 font-mono text-xs text-fg-dim">
               {keys}
             </dt>
             <dd className="text-right text-xs text-muted">{label}</dd>

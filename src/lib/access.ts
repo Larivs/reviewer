@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { getCurrentUser, type CurrentUser } from "./auth";
 import { getVideo, type Video } from "./videos";
+import { getBreadcrumb } from "./folders";
 import { scopeAllowsFolder, scopeAllowsVideo, type Scope } from "./scope";
 
 export { scopeAllowsFolder, scopeAllowsVideo, type Scope };
@@ -228,6 +229,51 @@ export async function requireVideoView(
 }
 
 /**
+ * Ce que ce spectateur peut faire **de cette vidéo**, au-delà de la voir.
+ *
+ * Le studio télécharge, sans filigrane. Un invité tient ses droits du ou des
+ * liens par lesquels il atteint la vidéo : il télécharge si l'un d'eux le
+ * permet, et il est filigrané si l'un d'eux le demande. Les deux règles
+ * penchent du côté de ce que le studio a explicitement réglé. Un invité à
+ * qui un admin a ouvert un projet à la main n'a ni l'un ni l'autre.
+ */
+export function videoCapabilities(viewer: Viewer, video: Video) {
+  if (!isGuest(viewer)) return { download: true, watermark: false, linkIds: [] as string[] };
+
+  const now = Date.now();
+  const alive = (l: { expiresAt: number | null }) => l.expiresAt === null || l.expiresAt > now;
+  const options = { linkId: shareLinks.id, allowDownload: shareLinks.allowDownload, watermark: shareLinks.watermark, expiresAt: shareLinks.expiresAt };
+
+  // Dossiers au-dessus de la vidéo : un lien posé sur l'un d'eux l'atteint.
+  const above = new Set(video.folderId ? getBreadcrumb(video.folderId).map((f) => f.id) : []);
+
+  const reaching = [
+    ...db
+      .select({ ...options, videoId: videoGrants.videoId, stackId: videos.stackId })
+      .from(videoGrants)
+      .innerJoin(shareLinks, eq(shareLinks.id, videoGrants.linkId))
+      .innerJoin(videos, eq(videos.id, videoGrants.videoId))
+      .where(eq(videoGrants.userId, viewer.id))
+      .all()
+      .filter((l) => l.videoId === video.id || (l.stackId !== null && l.stackId === video.stackId)),
+    ...db
+      .select({ ...options, folderId: folderGrants.folderId })
+      .from(folderGrants)
+      .innerJoin(shareLinks, eq(shareLinks.id, folderGrants.linkId))
+      .where(eq(folderGrants.userId, viewer.id))
+      .all()
+      .filter((l) => above.has(l.folderId)),
+  ].filter(alive);
+
+  return {
+    download: reaching.some((l) => l.allowDownload),
+    watermark: reaching.some((l) => l.watermark),
+    /** Pour le journal d'activité : où noter ce que fait ce visiteur. */
+    linkIds: [...new Set(reaching.map((l) => l.linkId))],
+  };
+}
+
+/**
  * Version pour les routes API, qui doivent rendre un statut et non une page.
  * Même politique : 404 plutôt que 403, et jamais de détail sur la raison.
  */
@@ -296,6 +342,8 @@ export type Account = {
   id: string;
   name: string;
   role: UserRole;
+  /** Où le prévenir. `null` : il ne reçoit pas de courriel. */
+  email: string | null;
   createdAt: number;
   /** Projets ouverts à ce compte. Vide pour un admin ou un membre. */
   grants: { id: string; name: string }[];
@@ -307,6 +355,7 @@ export function listAccounts(): Account[] {
       id: users.id,
       name: users.name,
       role: users.role,
+      email: users.email,
       createdAt: users.createdAt,
     })
     .from(users)

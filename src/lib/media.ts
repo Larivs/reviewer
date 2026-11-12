@@ -1,6 +1,7 @@
 // Pas de garde "server-only" ici : `node:child_process` rend déjà tout
 // usage côté client impossible, et ce module reste testable en isolation.
 import { execFile } from "node:child_process";
+import { unlink } from "node:fs/promises";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
@@ -136,6 +137,100 @@ export async function transcode(inputPath: string, outputPath: string) {
     ],
     { maxBuffer: 64 * 1024 * 1024 },
   );
+}
+
+/** Ce que ffprobe nomme pour une image fixe : `png_pipe`, `image2`… */
+export function isStillImage(p: Probe) {
+  return Boolean(p.videoCodec) && (p.container === "image2" || p.container.endsWith("_pipe"));
+}
+
+const AUDIO_CONTAINERS = ["mp3", "wav", "flac", "ogg", "aac", "aiff"];
+
+/**
+ * Un son : pas d'image, ou seulement la pochette qu'un MP3 embarque et que
+ * ffprobe présente comme une piste vidéo.
+ */
+export function isAudioOnly(p: Probe) {
+  if (!p.audioCodec) return false;
+  return !p.videoCodec || p.container.split(",").some((c) => AUDIO_CONTAINERS.includes(c));
+}
+
+/**
+ * Une image fixe devient une seconde de vidéo.
+ *
+ * Plutôt qu'une seconde visionneuse, avec son propre zoom, son propre calque
+ * de dessin et ses propres notes : l'image passe par le lecteur, et tout ce
+ * qui existe pour une vidéo, annotations, versions, comparaison en volet,
+ * marche sans une ligne de plus. La largeur est plafonnée à 3840, au-delà
+ * H.264 refuse ou le navigateur ne décode plus.
+ */
+export async function stillToVideo(inputPath: string, outputPath: string) {
+  await run(
+    FFMPEG,
+    [
+      "-loop", "1",
+      "-i", inputPath,
+      "-t", "1",
+      "-r", "25",
+      "-c:v", "libx264",
+      "-pix_fmt", "yuv420p",
+      "-vf", "scale='trunc(min(3840,iw)/2)*2':-2",
+      "-movflags", "+faststart",
+      "-f", "mp4",
+      "-y",
+      outputPath,
+    ],
+    { timeout: 120_000 },
+  );
+}
+
+/**
+ * Un son devient une vidéo dont l'image est sa forme d'onde.
+ *
+ * Même raisonnement que pour l'image, et un vrai gain : on **voit** où sont
+ * les silences et les attaques, donc où poser une note. Deux passes, la
+ * forme d'onde d'abord, puis le film de cette image sous la bande son.
+ */
+export async function audioToVideo(inputPath: string, outputPath: string) {
+  const wave = `${outputPath}.png`;
+  try {
+    await run(
+      FFMPEG,
+      [
+        "-i", inputPath,
+        "-filter_complex", "[0:a:0]showwavespic=s=1280x360:colors=0x4aa8ff[w]",
+        "-map", "[w]",
+        "-frames:v", "1",
+        "-y",
+        wave,
+      ],
+      { maxBuffer: 64 * 1024 * 1024 },
+    );
+    await run(
+      FFMPEG,
+      [
+        "-loop", "1",
+        "-framerate", "5",
+        "-i", wave,
+        "-i", inputPath,
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        "-c:v", "libx264",
+        "-tune", "stillimage",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-shortest",
+        "-movflags", "+faststart",
+        "-f", "mp4",
+        "-y",
+        outputPath,
+      ],
+      { maxBuffer: 64 * 1024 * 1024 },
+    );
+  } finally {
+    await unlink(wave).catch(() => {});
+  }
 }
 
 /**

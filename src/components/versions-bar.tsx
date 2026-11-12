@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
+import { carryNotesAction } from "@/actions/comments";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/lib/upload-client";
 import { formatShortDateTime } from "@/lib/format";
@@ -22,17 +23,21 @@ export function VersionsBar({
   versions,
   currentId,
   canManage,
+  carry,
 }: {
   versions: VersionItem[];
   currentId: string;
   /** Déposer une version est un geste du studio, comme tout dépôt. */
   canManage: boolean;
+  /** Notes encore ouvertes sur la version précédente, à reporter ici. */
+  carry: { fromVersion: number; open: number } | null;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<() => void>(() => {});
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [carrying, startTransition] = useTransition();
 
   const current = versions.find((v) => v.id === currentId);
   const others = versions.filter((v) => v.id !== currentId);
@@ -40,6 +45,18 @@ export function VersionsBar({
   // qu'on se pose en ouvrant une v3, « qu'est-ce qui a changé depuis la v2 ».
   const previous =
     [...others].reverse().find((v) => v.version < (current?.version ?? 0)) ?? others[0];
+
+  function carryNotes() {
+    startTransition(async () => {
+      const result = await carryNotesAction(currentId);
+      if (!result.ok) return toast(result.error, "error");
+      toast(
+        result.carried === 0
+          ? "Ces notes sont déjà sur cette version"
+          : `${result.carried} note${result.carried > 1 ? "s" : ""} reportée${result.carried > 1 ? "s" : ""}`,
+      );
+    });
+  }
 
   async function send(file: File) {
     setError(null);
@@ -75,7 +92,7 @@ export function VersionsBar({
             href={`/v/${v.id}`}
             aria-current={v.id === currentId ? "page" : undefined}
             title={`Déposée le ${formatShortDateTime(v.createdAt)}`}
-            className={`px-2 py-1 font-mono text-[11px] tabular-nums transition-colors ${
+            className={`px-2 py-1 font-mono text-xs tabular-nums transition-colors ${
               v.id === currentId
                 ? "bg-accent/15 text-accent"
                 : "text-muted hover:bg-surface-2 hover:text-fg"
@@ -90,6 +107,20 @@ export function VersionsBar({
         <Link href={`/compare/${previous.id}/${currentId}`} className="btn btn-ghost !py-1">
           Comparer à la v{previous.version}
         </Link>
+      )}
+
+      {/* Proposé seulement s'il reste quelque chose à reporter : un bouton
+          qui ne ferait rien n'a pas à occuper la barre. */}
+      {canManage && carry && carry.open > 0 && (
+        <button
+          type="button"
+          onClick={carryNotes}
+          disabled={carrying}
+          title="Recopie ici les notes non résolues de la version précédente"
+          className="btn btn-ghost !py-1"
+        >
+          Reporter {carry.open} note{carry.open > 1 ? "s" : ""} de la v{carry.fromVersion}
+        </button>
       )}
 
       {canManage &&
@@ -119,7 +150,7 @@ export function VersionsBar({
       <input
         ref={inputRef}
         type="file"
-        accept="video/*,.mp4,.mov,.m4v,.webm,.mkv,.mxf"
+        accept="video/*,image/*,audio/*,.mp4,.mov,.m4v,.webm,.mkv,.mxf"
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0];

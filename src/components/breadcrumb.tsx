@@ -14,11 +14,11 @@ export function Breadcrumb({ trail }: { trail: Folder[] }) {
   return (
     <nav
       aria-label="Fil d'Ariane"
-      className="flex min-w-0 items-center gap-1.5 font-mono text-[11px]"
+      className="flex min-w-0 items-center gap-1.5 font-mono text-xs"
     >
       <Link
         href="/"
-        className="shrink-0 uppercase tracking-[0.14em] text-muted transition-colors hover:text-fg"
+        className="shrink-0 text-muted transition-colors hover:text-fg"
       >
         Projets
       </Link>

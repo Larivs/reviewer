@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { splitMentions } from "@/lib/mentions";
 import {
   createReplyAction,
   deleteCommentAction,
@@ -135,10 +136,17 @@ export function CommentItem({
         {/* Le rang était en `line-strong` sur `surface-2` : deux valeurs
             presque identiques, donc un numéro invisible. C'est pourtant lui
             qui sert à citer la note à l'oral, il devient une pastille. */}
+        {/* La même pastille que sur la piste : même numéro, même couleur
+            d'auteur, même forme. On passe de l'une à l'autre sans chercher.
+            En gris de 11 px sur gris, on ne la lisait pas. */}
         <span
-          className={`shrink-0 rounded-sm px-1 py-px font-mono text-[10px] tabular-nums ${
-            active ? "bg-accent/20 text-accent" : "bg-surface-3 text-fg-dim"
+          className={`grid h-[22px] min-w-[22px] shrink-0 place-items-center rounded-full px-1 text-[12.5px] font-bold leading-none tabular-nums text-[#07090e] ${
+            active ? "ring-2 ring-fg" : ""
           }`}
+          style={{
+            background: userColor(comment.authorColor).hex,
+            opacity: comment.resolved ? 0.55 : 1,
+          }}
         >
           {index}
         </span>
@@ -148,7 +156,7 @@ export function CommentItem({
           type="button"
           onClick={() => onSeek(comment.timecode)}
           title="Aller à ce timecode"
-          className="shrink-0 rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-[11.5px] tabular-nums tracking-[0.02em] text-accent transition-colors hover:bg-accent/25"
+          className="shrink-0 rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-[12.5px] tabular-nums tracking-[0.02em] text-accent transition-colors hover:bg-accent/25"
         >
           {formatTimecode(comment.timecode, fps)}
           {comment.timecodeEnd !== null && (
@@ -168,7 +176,7 @@ export function CommentItem({
         {annotation && (
           <span
             title={`Annotation : ${describeAnnotation(annotation)}`}
-            className="shrink-0 text-[11px] leading-none"
+            className="shrink-0 text-xs leading-none"
             style={{ color: teinte }}
           >
             ✎
@@ -182,10 +190,22 @@ export function CommentItem({
           shrink={false}
         />
 
+        {/* Violet, la teinte de « en cours » : ni l'accent, qui demande une
+            action, ni une couleur d'auteur. Il dit seulement que cette note
+            ne sort pas du studio. */}
+        {comment.internal && (
+          <span
+            title="Les clients ne voient pas cette note"
+            className="shrink-0 rounded-sm border border-status-doing/40 bg-status-doing/10 px-1.5 py-px text-[11.5px] font-medium text-status-doing"
+          >
+            interne
+          </span>
+        )}
+
         {comment.resolved && (
           <span
             title="Résolu"
-            className="ml-auto shrink-0 rounded-sm border border-status-done/35 bg-status-done/10 px-1.5 py-px text-[10.5px] font-medium text-status-done"
+            className="ml-auto shrink-0 rounded-sm border border-status-done/35 bg-status-done/10 px-1.5 py-px text-[11.5px] font-medium text-status-done"
           >
             ✓ résolu
           </span>
@@ -238,7 +258,7 @@ export function CommentItem({
             comment.resolved ? "text-fg-dim" : "text-fg"
           }`}
         >
-          {comment.body}
+          <MentionText body={comment.body} names={comment.mentions} />
         </p>
       )}
 
@@ -279,7 +299,7 @@ export function CommentItem({
                 )}
               </div>
               <p className="mt-0.5 whitespace-pre-wrap break-words text-[13.5px] leading-relaxed text-fg-dim">
-                {reply.body}
+                <MentionText body={reply.body} names={reply.mentions} />
               </p>
             </li>
           ))}
@@ -345,14 +365,14 @@ export function CommentItem({
             type="button"
             disabled={pending}
             onClick={() => run(() => deleteCommentAction(comment.id))}
-            className="btn !bg-status-changes !px-2 !py-0.5 !text-[11px] text-white disabled:opacity-45"
+            className="btn !bg-status-changes !px-2 !py-0.5 !text-xs text-white disabled:opacity-45"
           >
             {pending ? "…" : "Oui"}
           </button>
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="btn btn-ghost !px-2 !py-0.5 !text-[11px]"
+            className="btn btn-ghost !px-2 !py-0.5 !text-xs"
           >
             Non
           </button>
@@ -397,7 +417,7 @@ export function CommentItem({
               >
                 Répondre
                 {comment.replies.length > 0 && (
-                  <span className="ml-1 rounded-sm bg-surface-3 px-1 font-mono text-[10px] text-fg-dim">
+                  <span className="ml-1 rounded-sm bg-surface-3 px-1 font-mono text-[11px] text-fg-dim">
                     {comment.replies.length}
                   </span>
                 )}
@@ -430,5 +450,23 @@ export function CommentItem({
         )
       )}
     </li>
+  );
+}
+
+/**
+ * Le texte d'une note, avec ses `@Prénom` mis en avant. Les noms reconnus
+ * viennent du serveur : seuls ceux d'un vrai compte sont teintés, un `@`
+ * quelconque reste du texte.
+ */
+function MentionText({ body, names }: { body: string; names: string[] }) {
+  if (names.length === 0) return body;
+  return splitMentions(body, names).map((part, i) =>
+    part.mention ? (
+      <span key={i} className="rounded-sm bg-accent/12 px-0.5 font-medium text-accent">
+        {part.text}
+      </span>
+    ) : (
+      part.text
+    ),
   );
 }

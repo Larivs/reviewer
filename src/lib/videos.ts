@@ -21,9 +21,19 @@ export function partPath(userId: string, key: string) {
   return path.join(VIDEO_DIR, `envoi-${path.basename(userId)}-${path.basename(key)}.part`);
 }
 
-/** Original en attente de conversion, retiré une fois le H.264 produit. */
-export function sourcePath(id: string) {
-  return path.join(VIDEO_DIR, `${path.basename(id)}.source`);
+/**
+ * Nom sur disque de l'original, quand on le garde à côté de sa copie lisible.
+ * L'extension d'origine est conservée si elle est banale, pour que le
+ * fichier téléchargé s'ouvre dans le bon logiciel.
+ */
+export function originalFilename(id: string, uploadName: string) {
+  const ext = path.extname(uploadName).slice(1).toLowerCase();
+  return `${path.basename(id)}.orig.${/^[a-z0-9]{1,5}$/.test(ext) ? ext : "bin"}`;
+}
+
+/** Le fichier à rendre quand on demande l'original d'une vidéo. */
+export function originalPath(video: Video) {
+  return videoPath(video.original ?? video.filename);
 }
 
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024 * 1024; // 25 Go
@@ -207,7 +217,7 @@ export async function deleteVideo(video: Video) {
       videoPath(video.filename),
       thumbnailPath(video.id),
       spritePath(video.id),
-      sourcePath(video.id),
+      ...(video.original ? [videoPath(video.original)] : []),
     ].map((p) =>
       // Un fichier déjà absent n'est pas une erreur : la base est la référence.
       unlink(p).catch(() => {}),
